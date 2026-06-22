@@ -1,0 +1,18 @@
+
+> frontend@0.0.0 dev
+> vite --host 127.0.0.1 --port 5173
+
+
+  VITE v8.0.16  ready in 208 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+9:24:21 pm [vite] (client) hmr update /src/pages/Register.jsx, /src/index.css
+9:24:21 pm [vite] (client) hmr update /src/pages/Verify.jsx, /src/index.css
+9:26:33 pm [vite] (client) hmr update /src/pages/AuditLog.jsx, /src/index.css
+9:26:33 pm [vite] (client) hmr update /src/pages/Results.jsx, /src/index.css
+9:26:33 pm [vite] (client) hmr update /src/pages/Dashboard.jsx, /src/index.css
+9:29:44 pm [vite] (client) ✨ new dependencies optimized: axios, lucide-react
+9:29:44 pm [vite] (client) ✨ optimized dependencies changed. reloading
+9:47:08 pm [vite] (client) hmr update /src/index.css, /src/pages/Register.jsx, /src/pages/Verify.jsx, /src/pages/AuditLog.jsx
+9:47:08 pm [vite] .env changed, restarting server...
+9:47:08 pm [vite] server restarted.
