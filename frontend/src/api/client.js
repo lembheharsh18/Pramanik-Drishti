@@ -34,4 +34,8 @@ export function runFraudDemo() {
   return apiClient.post('/demo/run-fraud')
 }
 
+export function getSystemStatus() {
+  return apiClient.get('/system/status')
+}
+
 export default apiClient

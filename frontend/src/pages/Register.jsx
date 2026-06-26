@@ -68,12 +68,12 @@ function Register() {
 
       <form className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]" onSubmit={handleSubmit}>
         <aside className="space-y-4">
-          <div className="animate-rise rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <label className="text-sm font-black text-slate-800" htmlFor="applicant-id">
+          <div className="animate-rise glass-card p-5">
+            <label className="text-sm font-bold text-ink" htmlFor="applicant-id">
               Applicant ID
             </label>
             <input
-              className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#2D1B8E] focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-surface-100 px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/25"
               id="applicant-id"
               placeholder="e.g. APP-2024-001"
               type="text"
@@ -82,8 +82,8 @@ function Register() {
             />
           </div>
 
-          <div className="animate-rise-delay-1 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0F6E56]">
+          <div className="animate-rise-delay-1 glass-card p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-emerald">
               Issuance Pipeline
             </p>
             <div className="mt-4 space-y-3">
@@ -94,7 +94,7 @@ function Register() {
           </div>
 
           {error ? (
-            <div className="animate-rise rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-[#A32D2D]">
+            <div className="animate-rise rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm font-bold text-danger">
               {error}
             </div>
           ) : null}
@@ -109,7 +109,7 @@ function Register() {
             <LoadingSpinner message="Registering bundle and storing hashes..." />
           ) : (
             <button
-              className="scanline inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950"
+              className="gradient-btn inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3.5 text-sm font-bold text-white"
               type="submit"
             >
               Register Bundle & Store Hashes <ShieldCheck size={18} />
@@ -123,15 +123,15 @@ function Register() {
 
 function PageHero({ title, subtitle, count }) {
   return (
-    <div className="animate-rise flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
+    <div className="animate-rise glass-card flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
       <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0F6E56]">Issuance</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">{title}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{subtitle}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-emerald">Issuance</p>
+        <h1 className="mt-2 text-3xl font-extrabold text-ink">{title}</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">{subtitle}</p>
       </div>
-      <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-right">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#2D1B8E]">Documents ready</p>
-        <p className="mt-1 text-2xl font-black text-[#2D1B8E]">{count} / 7</p>
+      <div className="rounded-xl border border-primary/20 bg-primary/5 px-5 py-3 text-right">
+        <p className="text-xs font-bold uppercase tracking-wide text-primary-light">Documents ready</p>
+        <p className="mt-1 text-2xl font-extrabold text-primary-light">{count} / 7</p>
       </div>
     </div>
   )
@@ -139,8 +139,8 @@ function PageHero({ title, subtitle, count }) {
 
 function PipelineStep({ icon, text }) {
   return (
-    <div className="flex items-center gap-3 rounded-md bg-slate-50 px-3 py-3 text-sm font-bold text-slate-700">
-      <span className="text-[#2D1B8E]">{icon}</span>
+    <div className="flex items-center gap-3 rounded-lg bg-surface-100 px-3 py-3 text-sm font-medium text-ink-muted">
+      <span className="text-primary-light">{icon}</span>
       {text}
     </div>
   )
@@ -148,19 +148,19 @@ function PipelineStep({ icon, text }) {
 
 function SuccessCard({ result }) {
   return (
-    <div className="animate-rise rounded-lg border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-      <p className="text-sm font-black text-[#085041]">Bundle sealed successfully.</p>
+    <div className="animate-rise rounded-xl border border-accent-emerald/30 bg-accent-emerald/[0.06] p-5 glow-border-emerald">
+      <p className="text-sm font-bold text-accent-emerald">Bundle sealed successfully.</p>
       <dl className="mt-4 space-y-3 text-sm">
         <div>
-          <dt className="font-bold text-slate-500">Bundle ID</dt>
-          <dd className="mt-1 break-all font-mono text-slate-950">{result.bundle_id}</dd>
+          <dt className="font-medium text-ink-faint">Bundle ID</dt>
+          <dd className="mt-1 break-all font-mono text-ink">{result.bundle_id}</dd>
         </div>
         <div>
-          <dt className="font-bold text-slate-500">Merkle Root</dt>
-          <dd className="mt-1 font-mono text-slate-950">{result.merkle_root?.slice(0, 16)}...</dd>
+          <dt className="font-medium text-ink-faint">Merkle Root</dt>
+          <dd className="mt-1 font-mono text-ink">{result.merkle_root?.slice(0, 16)}...</dd>
         </div>
       </dl>
-      <p className="mt-4 text-sm font-black text-[#085041]">Save this Bundle ID for verification.</p>
+      <p className="mt-4 text-sm font-bold text-accent-emerald">Save this Bundle ID for verification.</p>
     </div>
   )
 }

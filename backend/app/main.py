@@ -51,7 +51,14 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event() -> None:
     init_db()
-    print("PRAMANIK-DRISHTI running in OFFLINE MODE — no external connections required")
+    print("=" * 60)
+    print("PRAMANIK-DRISHTI v2.0 — OFFLINE MODE")
+    print("Layer 1: Forensic Analysis — ACTIVE")
+    print("Layer 2: Temporal Logic (9 rules) — ACTIVE")
+    print("Layer 3: Bundle Seal — ACTIVE")
+    print("DRISHTI: Insight Cards (11 patterns) — ACTIVE")
+    print("External API calls: NONE")
+    print("=" * 60)
 
 
 app.include_router(issuance_router)
@@ -64,7 +71,7 @@ def root() -> dict:
     return {
         "name": "PRAMANIK-DRISHTI",
         "tagline": "Authentic Vision — The document that sees its own truth",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "operational",
         "docs": "/docs",
     }
@@ -73,11 +80,22 @@ def root() -> dict:
 @app.get("/system/status")
 def system_status() -> dict:
     return {
+        "name": "PRAMANIK-DRISHTI",
+        "version": "2.0.0",
         "status": "operational",
         "mode": "offline",
         "external_api_calls": False,
         "internet_required": False,
         "database": "sqlite_local",
-        "verification_engine": "local_only",
-        "message": "All processing happens on this machine. No data leaves this server.",
+        "detection_layers": {
+            "layer_1_forensic": "active",
+            "layer_2_temporal": "active", 
+            "layer_3_bundle_seal": "active"
+        },
+        "supported_verification_types": [
+            "home_loan", "business_loan", "land_mutation", "msme_loan"
+        ],
+        "fraud_patterns_loaded": 11,
+        "temporal_rules_loaded": 9,
+        "message": "All processing runs on this machine. No data leaves this server."
     }

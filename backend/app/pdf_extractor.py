@@ -155,6 +155,105 @@ def extract_land_record_data(full_text: str) -> dict:
     }
 
 
+def extract_property_tax_data(full_text: str) -> dict:
+    return {
+        "owner_name": _find_line_value(
+            full_text,
+            ["owner name:", "assessee name:", "name of owner:"],
+        ),
+        "receipt_date": _find_date_near_keywords(
+            full_text,
+            ["receipt date", "payment date", "paid on", "date:"],
+        ),
+        "tax_amount": _find_amount_near_keywords(
+            full_text,
+            ["tax paid", "amount paid", "total amount", "receipt amount"],
+        ),
+        "property_id": _find_line_value(
+            full_text,
+            ["property id:", "assessment number:", "pid no:"],
+        ),
+    }
+
+
+def extract_bank_statement_data(full_text: str) -> dict:
+    return {
+        "account_holder": _find_line_value(
+            full_text,
+            ["name:", "account name:", "customer name:"],
+        ),
+        "account_number": _find_line_value(
+            full_text,
+            ["account no:", "a/c no:", "account number:"],
+        ),
+        "statement_period": _find_first_match(
+            full_text,
+            [
+                r"period\s*[:\-]?\s*([0-9]{1,2}[/-][a-zA-Z0-9]+[/-][0-9]{2,4}\s*to\s*[0-9]{1,2}[/-][a-zA-Z0-9]+[/-][0-9]{2,4})",
+                r"from\s*([0-9]{1,2}[/-][a-zA-Z0-9]+[/-][0-9]{2,4})\s*to\s*([0-9]{1,2}[/-][a-zA-Z0-9]+[/-][0-9]{2,4})",
+            ],
+        ),
+        "total_credits": _find_amount_near_keywords(
+            full_text,
+            ["total credit", "total credits", "sum of credits", "credit total"],
+        ),
+        "total_debits": _find_amount_near_keywords(
+            full_text,
+            ["total debit", "total debits", "sum of debits", "debit total"],
+        ),
+        "closing_balance": _find_amount_near_keywords(
+            full_text,
+            ["closing balance", "balance at end", "available balance"],
+        ),
+    }
+
+
+def extract_gst_returns_data(full_text: str) -> dict:
+    return {
+        "gstin": _find_first_match(
+            full_text,
+            [r"\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b"],
+        ),
+        "legal_name": _find_line_value(
+            full_text,
+            ["legal name:", "name of taxpayer:", "trade name:"],
+        ),
+        "return_period": _find_line_value(
+            full_text,
+            ["tax period:", "return period:", "month/year:"],
+        ),
+        "total_turnover": _find_amount_near_keywords(
+            full_text,
+            ["taxable value", "total turnover", "gross turnover"],
+        ),
+        "total_tax_paid": _find_amount_near_keywords(
+            full_text,
+            ["total tax", "tax paid", "tax liability"],
+        ),
+    }
+
+
+def extract_business_registration_data(full_text: str) -> dict:
+    return {
+        "company_name": _find_line_value(
+            full_text,
+            ["name of company:", "entity name:", "business name:"],
+        ),
+        "registration_number": _find_first_match(
+            full_text,
+            [r"\b(U[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6})\b", r"\b(L[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6})\b"],
+        ),
+        "date_of_incorporation": _find_date_near_keywords(
+            full_text,
+            ["date of incorporation", "registered on", "issued on"],
+        ),
+        "company_type": _find_line_value(
+            full_text,
+            ["type of company:", "class of company:"],
+        ),
+    }
+
+
 def _find_first_match(full_text: str, patterns: list[str]) -> str | None:
     for pattern in patterns:
         match = re.search(pattern, full_text or "", re.IGNORECASE)

@@ -2,41 +2,216 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design Tokens ─── */
 :root {
-  --color-primary: #2D1B8E;
-  --color-accent: #0F6E56;
-  --color-danger: #A32D2D;
-  --color-ink: #1A1A2E;
+  --surface: #0A0E1A;
+  --surface-50: #0D1225;
+  --surface-100: #111630;
+  --surface-200: #161C3D;
+  --surface-300: #1E2548;
+  --primary: #6C5CE7;
+  --primary-light: #A29BFE;
+  --primary-glow: rgba(108, 92, 231, 0.25);
+  --accent-emerald: #00D9A6;
+  --accent-emerald-glow: rgba(0, 217, 166, 0.20);
+  --danger: #FF4757;
+  --danger-glow: rgba(255, 71, 87, 0.25);
+  --warning: #FFB74D;
+  --warning-glow: rgba(255, 183, 77, 0.20);
+  --ink: #E8E9F0;
+  --ink-muted: #8B8FA3;
+  --ink-faint: #5A5F75;
 }
 
+/* ─── Base ─── */
 body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
-  background:
-    linear-gradient(90deg, rgba(45, 27, 142, 0.045) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(15, 110, 86, 0.04) 1px, transparent 1px),
-    #F8F8FC;
-  background-size: 32px 32px, 32px 32px, auto;
-  color: var(--color-ink);
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(0, 217, 166, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 50% 80%, rgba(255, 71, 87, 0.04) 0%, transparent 60%);
+  color: var(--ink);
 }
 
 ::selection {
-  background: rgba(45, 27, 142, 0.18);
+  background: rgba(108, 92, 231, 0.35);
+  color: #fff;
 }
 
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ─── Glassmorphism Utilities ─── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.glass-card-hover {
+  transition: all 300ms ease;
+}
+
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(108, 92, 231, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(108, 92, 231, 0.1);
+  transform: translateY(-2px);
+}
+
+.glass-inset {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+/* ─── Gradient Utilities ─── */
+.gradient-strip {
+  background: linear-gradient(90deg, #6C5CE7, #00D9A6, #FF4757, #6C5CE7);
+  background-size: 300% 100%;
+  animation: gradientFlow 6s linear infinite;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #6C5CE7, #A29BFE, #00D9A6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-btn {
+  background: linear-gradient(135deg, #6C5CE7, #5A4BD1);
+  position: relative;
+  overflow: hidden;
+  transition: all 300ms ease;
+}
+
+.gradient-btn:hover {
+  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.4);
+  transform: translateY(-1px);
+}
+
+.gradient-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: skewX(-18deg);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.gradient-btn:disabled {
+  background: var(--surface-300);
+  box-shadow: none;
+  transform: none;
+}
+
+.gradient-btn:disabled::after {
+  display: none;
+}
+
+/* ─── Glow Borders ─── */
+.glow-border-primary {
+  box-shadow: 0 0 0 1px rgba(108, 92, 231, 0.4), 0 0 20px rgba(108, 92, 231, 0.15);
+}
+
+.glow-border-emerald {
+  box-shadow: 0 0 0 1px rgba(0, 217, 166, 0.4), 0 0 20px rgba(0, 217, 166, 0.15);
+}
+
+.glow-border-danger {
+  box-shadow: 0 0 0 1px rgba(255, 71, 87, 0.4), 0 0 20px rgba(255, 71, 87, 0.15);
+}
+
+.glow-border-warning {
+  box-shadow: 0 0 0 1px rgba(255, 183, 77, 0.4), 0 0 20px rgba(255, 183, 77, 0.15);
+}
+
+/* ─── Status Glow Dots ─── */
+.glow-dot-emerald {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00D9A6;
+  box-shadow: 0 0 8px rgba(0, 217, 166, 0.6);
+}
+
+.glow-dot-danger {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF4757;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* ─── Form Inputs (Dark) ─── */
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  background: var(--surface-100);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  border-radius: 8px;
+  transition: all 200ms ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  outline: none;
+}
+
+input[type="text"]::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ─── Checkbox Dark ─── */
+input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+
+/* ─── Animations ─── */
 .animate-rise {
-  animation: rise 520ms ease both;
+  animation: fadeInUp 520ms ease both;
 }
 
 .animate-rise-delay-1 {
-  animation: rise 620ms ease 90ms both;
+  animation: fadeInUp 620ms ease 90ms both;
 }
 
 .animate-rise-delay-2 {
-  animation: rise 620ms ease 170ms both;
+  animation: fadeInUp 620ms ease 170ms both;
 }
 
 .animate-soft-pulse {
-  animation: soft-pulse 1.8s ease-in-out infinite;
+  animation: pulseGlow 1.8s ease-in-out infinite;
 }
 
 .scanline {
@@ -45,8 +220,8 @@ body {
 }
 
 .scanline::after {
-  animation: scanline 2.8s ease-in-out infinite;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: shimmer 2.8s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
   content: "";
   height: 100%;
   left: -50%;
@@ -56,28 +231,10 @@ body {
   width: 38%;
 }
 
-.signal-strip {
-  animation: signal-flow 5s linear infinite;
-  background: linear-gradient(90deg, #2D1B8E, #0F6E56, #A32D2D, #2D1B8E);
-  background-size: 240% 100%;
-}
-
-.circuit-bg {
-  background:
-    linear-gradient(90deg, rgba(45, 27, 142, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(15, 110, 86, 0.08) 1px, transparent 1px),
-    #ffffff;
-  background-size: 28px 28px;
-}
-
-.verification-rail {
-  animation: rail-move 2.4s linear infinite;
-}
-
-@keyframes rise {
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -85,42 +242,49 @@ body {
   }
 }
 
-@keyframes soft-pulse {
+@keyframes pulseGlow {
   0%, 100% {
-    opacity: 0.74;
+    opacity: 0.7;
   }
   50% {
     opacity: 1;
   }
 }
 
-@keyframes scanline {
+@keyframes shimmer {
   0% {
-    left: -50%;
+    left: -60%;
   }
   48%, 100% {
     left: 120%;
   }
 }
 
-@keyframes signal-flow {
+@keyframes gradientFlow {
   0% {
-    background-position: 0 0;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
   100% {
-    background-position: 240% 0;
+    background-position: 0% 50%;
   }
 }
 
-@keyframes rail-move {
-  0% {
-    stroke-dashoffset: 80;
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translate(0, 0);
   }
-  100% {
-    stroke-dashoffset: 0;
+  33% {
+    transform: translate(30px, -20px);
+  }
+  66% {
+    transform: translate(-20px, 15px);
   }
 }
 
+/* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -128,5 +292,6 @@ body {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }

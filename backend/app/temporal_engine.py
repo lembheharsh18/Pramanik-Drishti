@@ -351,6 +351,139 @@ def check_seller_owner_match(
     )
 
 
+def check_property_value_consistency(
+    sale_deed_data: dict, valuation_data: dict
+) -> TemporalCheckResult:
+    rule_id = "TEMP-08"
+    rule_name = "Property Value Consistency"
+    
+    deed_amount_str = sale_deed_data.get("stamp_duty_amount") or sale_deed_data.get("consideration_amount")
+    val_amount_str = valuation_data.get("property_value")
+    
+    if not deed_amount_str or not val_amount_str:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.WARNING,
+            None,
+            "Sale deed value and valuation amount",
+            "Could not extract both deed value and valuation amount for comparison",
+            "LOW"
+        )
+        
+    try:
+        deed_amount = float(str(deed_amount_str).replace(",", ""))
+        val_amount = float(str(val_amount_str).replace(",", ""))
+    except ValueError:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.WARNING,
+            None,
+            "Numeric amounts",
+            "Could not parse amounts to numbers",
+            "LOW"
+        )
+        
+    if val_amount == 0:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.WARNING,
+            val_amount,
+            "> 0",
+            "Valuation amount is 0",
+            "LOW"
+        )
+        
+    ratio = deed_amount / val_amount
+    
+    if ratio < 0.2:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.FAIL,
+            f"Ratio: {ratio:.2f} (Deed: {deed_amount}, Val: {val_amount})",
+            "Ratio >= 0.2",
+            f"Sale deed value ({deed_amount}) is less than 20% of valuation ({val_amount}). This indicates potential stamp duty evasion or a fraudulent valuation report inflated for a larger loan.",
+            "HIGH"
+        )
+    elif ratio > 5.0:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.FAIL,
+            f"Ratio: {ratio:.2f} (Deed: {deed_amount}, Val: {val_amount})",
+            "Ratio <= 5.0",
+            f"Sale deed value ({deed_amount}) is more than 5x the valuation ({val_amount}). This is highly anomalous and indicates potential money laundering or a fabricated deed.",
+            "HIGH"
+        )
+        
+    return _result(
+        rule_id,
+        rule_name,
+        CheckStatus.PASS,
+        f"Ratio: {ratio:.2f}",
+        "0.2 <= Ratio <= 5.0",
+        "Property value is consistent between deed and valuation report.",
+        "LOW"
+    )
+
+def check_bank_statement_vs_itr(
+    bank_statement_data: dict, itr_data: dict
+) -> TemporalCheckResult:
+    rule_id = "TEMP-09"
+    rule_name = "Bank Credits vs ITR Gross Income"
+    
+    total_credits = bank_statement_data.get("total_credits")
+    gross_income = itr_data.get("gross_income")
+    
+    if total_credits is None or gross_income is None:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.WARNING,
+            None,
+            "Bank total credits and ITR gross income",
+            "Could not extract total credits or gross income for comparison",
+            "LOW"
+        )
+        
+    try:
+        total_credits = float(str(total_credits).replace(",", ""))
+        gross_income = float(str(gross_income).replace(",", ""))
+    except ValueError:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.WARNING,
+            None,
+            "Numeric amounts",
+            "Could not parse amounts to numbers",
+            "LOW"
+        )
+        
+    if total_credits > gross_income * 3:
+        return _result(
+            rule_id,
+            rule_name,
+            CheckStatus.FAIL,
+            f"Credits: {total_credits}, Income: {gross_income}",
+            "Credits <= 3x Income",
+            f"Annualised bank credits ({total_credits}) are more than 3x the declared gross income ({gross_income}). This indicates significant undisclosed income or circular transactions.",
+            "HIGH"
+        )
+        
+    return _result(
+        rule_id,
+        rule_name,
+        CheckStatus.PASS,
+        f"Credits: {total_credits}, Income: {gross_income}",
+        "Credits <= 3x Income",
+        "Bank credits are reasonably aligned with declared ITR income.",
+        "LOW"
+    )
+
 def run_all_temporal_checks(
     itr_data: dict,
     salary_slips_data: list[dict],
@@ -358,9 +491,11 @@ def run_all_temporal_checks(
     sale_deed_data: dict,
     land_record_data: dict,
     application_date: datetime.date,
+    bank_statement_data: dict | None = None,
     sanction_date_str: str | None = None,
 ) -> list[TemporalCheckResult]:
     first_salary_slip = salary_slips_data[0] if salary_slips_data else {}
+    bank_statement = bank_statement_data or {}
 
     return [
         check_itr_filing_date(itr_data),
@@ -370,6 +505,8 @@ def run_all_temporal_checks(
         check_income_consistency(itr_data, first_salary_slip),
         check_valuation_recency(valuation_data, application_date),
         check_seller_owner_match(sale_deed_data, land_record_data),
+        check_property_value_consistency(sale_deed_data, valuation_data),
+        check_bank_statement_vs_itr(bank_statement, itr_data),
     ]
 
 

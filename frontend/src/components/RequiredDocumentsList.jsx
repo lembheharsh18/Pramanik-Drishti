@@ -33,7 +33,7 @@ function RequiredDocumentsList({ verificationType, documents, onProceed, onBack 
   return (
     <section className="mx-auto max-w-4xl space-y-6 py-4">
       <button
-        className="inline-flex items-center gap-2 text-sm font-black text-[#2D1B8E] transition hover:text-indigo-950"
+        className="inline-flex items-center gap-2 text-sm font-bold text-primary-light transition hover:text-primary"
         type="button"
         onClick={onBack}
       >
@@ -41,21 +41,21 @@ function RequiredDocumentsList({ verificationType, documents, onProceed, onBack 
         Change Type
       </button>
 
-      <div className="animate-rise rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="animate-rise glass-card p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0F6E56]">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-emerald">
               Document checklist
             </p>
-            <h1 className="mt-2 text-3xl font-black text-slate-950">
+            <h1 className="mt-2 text-3xl font-extrabold text-ink">
               Documents required for {verificationLabel}
             </h1>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+            <p className="mt-2 text-sm font-medium leading-6 text-ink-muted">
               Prepare the following documents as PDFs before uploading
             </p>
           </div>
           <button
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-[#2D1B8E] bg-white px-4 py-2 text-sm font-black text-[#2D1B8E] shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-50"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary-light transition hover:bg-primary/20 hover:border-primary/50"
             type="button"
             onClick={handleSelectAll}
           >
@@ -64,53 +64,61 @@ function RequiredDocumentsList({ verificationType, documents, onProceed, onBack 
           </button>
         </div>
 
-        <div className="mt-6 rounded-lg border-l-4 border-[#0F6E56] bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-700">
+        <div className="mt-6 rounded-lg border-l-4 border-accent-emerald bg-accent-emerald/5 px-4 py-3 text-sm font-medium leading-6 text-ink-muted">
           All documents must be in PDF format. Scanned documents are accepted. The system will
           automatically identify each document from its content — no manual labeling required.
         </div>
 
         <div className="mt-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-black text-slate-800">
+            <p className="text-sm font-bold text-ink">
               {readyCount} of {totalCount} documents ready
             </p>
-            <p className={`text-xs font-black uppercase tracking-[0.16em] ${isComplete ? 'text-[#0F6E56]' : 'text-[#2D1B8E]'}`}>
+            <p className={`text-xs font-bold uppercase tracking-[0.16em] ${isComplete ? 'text-accent-emerald' : 'text-primary-light'}`}>
               {progressPercent}% complete
             </p>
           </div>
-          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-300">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isComplete ? 'bg-[#0F6E56]' : 'bg-[#2D1B8E]'
+                isComplete
+                  ? 'bg-gradient-to-r from-accent-emerald to-accent-emerald-dark'
+                  : 'bg-gradient-to-r from-primary to-primary-light'
               }`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
-        <div className="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+        <div className="mt-6 divide-y divide-white/[0.04] overflow-hidden rounded-xl border border-white/[0.06] bg-surface-50">
           {documents.map((document, index) => {
             const isChecked = Boolean(checkedDocuments[document.id])
 
             return (
               <label
                 key={document.id}
-                className={`flex cursor-pointer items-center gap-4 p-4 transition hover:bg-indigo-50/50 ${
-                  isChecked ? 'bg-emerald-50/70' : 'bg-white'
+                className={`flex cursor-pointer items-center gap-4 p-4 transition-all duration-200 hover:bg-primary/[0.06] ${
+                  isChecked ? 'bg-accent-emerald/[0.06]' : ''
                 }`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2D1B8E] text-sm font-black text-white">
-                  {index + 1}
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all duration-300 ${
+                    isChecked
+                      ? 'bg-accent-emerald text-surface shadow-glow-emerald'
+                      : 'bg-primary/15 text-primary-light'
+                  }`}
+                >
+                  {isChecked ? <CheckCircle2 size={18} /> : index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-black text-slate-950">{document.label}</span>
-                  <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">
+                  <span className="block text-sm font-bold text-ink">{document.label}</span>
+                  <span className="mt-1 block text-xs font-medium leading-5 text-ink-faint">
                     {document.description}
                   </span>
                 </span>
                 <input
                   checked={isChecked}
-                  className="h-5 w-5 shrink-0 rounded border-slate-300 text-[#2D1B8E] focus:ring-[#2D1B8E]"
+                  className="h-5 w-5 shrink-0 rounded border-white/20 bg-surface-200 text-primary focus:ring-primary focus:ring-offset-surface"
                   type="checkbox"
                   onChange={() => handleToggle(document.id)}
                 />
@@ -121,7 +129,7 @@ function RequiredDocumentsList({ verificationType, documents, onProceed, onBack 
 
         <div className="mt-7 flex justify-end">
           <button
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#2D1B8E] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950 sm:w-auto"
+            className="gradient-btn inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-bold text-white sm:w-auto"
             type="button"
             onClick={onProceed}
           >

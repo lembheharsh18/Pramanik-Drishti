@@ -83,10 +83,10 @@ function VerificationTypeSelector({ onSelect }) {
   return (
     <section className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-5xl flex-col justify-center py-8">
       <div className="animate-rise text-center">
-        <h1 className="text-4xl font-black leading-tight text-[#2D1B8E] sm:text-6xl">
-          PRAMANIK-DRISHTI
+        <h1 className="text-4xl font-extrabold leading-tight sm:text-6xl">
+          <span className="gradient-text">PRAMANIK-DRISHTI</span>
         </h1>
-        <p className="mt-4 text-base font-bold text-slate-600 sm:text-lg">
+        <p className="mt-4 text-base font-semibold text-ink-muted sm:text-lg">
           Select the type of verification to begin
         </p>
       </div>
@@ -100,34 +100,36 @@ function VerificationTypeSelector({ onSelect }) {
             <button
               key={type}
               aria-pressed={isSelected}
-              className={`group relative flex min-h-56 w-full flex-col rounded-[12px] border bg-white p-6 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#2D1B8E] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#2D1B8E] focus:ring-offset-2 ${
+              className={`group relative flex min-h-56 w-full flex-col rounded-xl border p-6 text-left transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface ${
                 isSelected
-                  ? 'border-[#2D1B8E] border-l-[8px] shadow-md ring-1 ring-indigo-100'
-                  : 'border-slate-300'
+                  ? 'border-primary/40 bg-primary/[0.08] shadow-glow-primary glow-border-primary'
+                  : 'glass-card glass-card-hover'
               }`}
               type="button"
               onClick={() => setSelectedType(type)}
             >
               {isSelected ? (
-                <span className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[#2D1B8E] text-white">
+                <span className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-glow-primary">
                   <Check size={18} strokeWidth={3} />
                 </span>
               ) : null}
 
               <span
-                className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${
-                  isSelected ? 'bg-[#2D1B8E] text-white' : 'bg-indigo-50 text-[#2D1B8E]'
+                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
+                  isSelected
+                    ? 'bg-primary text-white shadow-glow-primary'
+                    : 'bg-primary/10 text-primary-light group-hover:bg-primary/20'
                 }`}
               >
                 <Icon size={25} />
               </span>
-              <span className="mt-5 pr-8 text-2xl font-black text-slate-950">
+              <span className="mt-5 pr-8 text-2xl font-extrabold text-ink">
                 {verification.label}
               </span>
-              <span className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+              <span className="mt-3 text-sm font-medium leading-6 text-ink-muted">
                 {verification.description}
               </span>
-              <span className="mt-auto pt-6 text-xs font-black uppercase tracking-[0.16em] text-slate-400 group-hover:text-[#2D1B8E]">
+              <span className="mt-auto pt-6 text-xs font-bold uppercase tracking-[0.16em] text-ink-faint group-hover:text-primary-light">
                 {verification.documents.length} documents required
               </span>
             </button>
@@ -137,7 +139,7 @@ function VerificationTypeSelector({ onSelect }) {
 
       <div className="mt-8 flex justify-center">
         <button
-          className="inline-flex min-w-48 items-center justify-center gap-2 rounded-md bg-[#2D1B8E] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0"
+          className="gradient-btn inline-flex min-w-48 items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!selectedType}
           type="button"
           onClick={handleContinue}

@@ -64,18 +64,18 @@ function App() {
     <Layout currentStep={currentStep} onBrandClick={handleReset}>
       {currentStep === 'select_type' ? (
         <div className="space-y-6">
-          <div className="animate-rise rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+          <div className="animate-rise glass-card p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0F6E56]">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-emerald">
                   Demo mode
                 </p>
-                <p className="mt-1 text-sm font-semibold text-[#085041]">
+                <p className="mt-1 text-sm font-medium text-ink-muted">
                   Use the pre-loaded Home Loan sample and drop Bundle B to see fraud detection in action.
                 </p>
               </div>
               <button
-                className="inline-flex items-center justify-center rounded-md bg-[#0F6E56] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5"
+                className="gradient-btn inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-bold text-white"
                 type="button"
                 onClick={handleRunDemo}
               >

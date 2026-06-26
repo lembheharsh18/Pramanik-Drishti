@@ -139,6 +139,34 @@ FRAUD_PATTERNS = {
         ],
         severity="HIGH",
     ),
+    "TEMP-08": FraudPattern(
+        pattern_id="FP-010",
+        pattern_name="Property Value Inconsistency",
+        affected_document="Sale Deed and Valuation Report",
+        failed_check="Sale deed value is severely misaligned with property valuation",
+        explanation="The transaction value recorded in the sale deed is extremely low (<20%) or extremely high (>5x) compared to the assessed market value in the valuation report. This indicates potential stamp duty evasion (undervaluation) or money laundering/loan fraud (overvaluation).",
+        recommended_actions=[
+            "Review the circle rate / guideline value for the property locality",
+            "Verify the payment of consideration through bank channels",
+            "Interview the applicant regarding the transaction rationale",
+            "Escalate for enhanced due diligence review"
+        ],
+        severity="HIGH",
+    ),
+    "TEMP-09": FraudPattern(
+        pattern_id="FP-011",
+        pattern_name="Unexplained Bank Credits",
+        affected_document="Bank Statement and Income Tax Return",
+        failed_check="Annualised bank credits significantly exceed declared gross income",
+        explanation="The total credits in the bank statement, when annualised, are more than 3 times the gross income declared in the Income Tax Return. This massive discrepancy suggests undisclosed business income, circular transactions, or use of the account as a pass-through entity.",
+        recommended_actions=[
+            "Request a detailed explanation of major credits from the applicant",
+            "Cross-verify high-value credits against business invoices or loan agreements",
+            "Check for matching debits to identify circular fund routing",
+            "File a Suspicious Transaction Report (STR) if no satisfactory explanation is provided"
+        ],
+        severity="HIGH",
+    ),
 }
 
 

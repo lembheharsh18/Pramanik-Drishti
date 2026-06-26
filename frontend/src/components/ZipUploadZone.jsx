@@ -1,8 +1,9 @@
-import { ArrowRight, CheckCircle2, FileArchive, Loader2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, FileArchive, Loader2, Files } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-import { verifyBundleZip } from '../api/client.js'
+import { verifyBundle, verifyBundleZip } from '../api/client.js'
+import DocumentUploadGrid from './DocumentUploadGrid.jsx'
 
 const progressMessages = [
   'Extracting documents from ZIP...',
@@ -34,7 +35,18 @@ function ZipUploadZone({
   applicantId = '',
   demoMode = false,
 }) {
+  const [uploadMode, setUploadMode] = useState('zip') // 'zip' or 'individual'
   const [zipFile, setZipFile] = useState(null)
+  
+  // Initialize individual files state based on required documents
+  const [files, setFiles] = useState(() => {
+    const initialState = {}
+    requiredDocuments.forEach((doc) => {
+      initialState[doc.id] = null
+    })
+    return initialState
+  })
+
   const [applicantIdValue, setApplicantIdValue] = useState(applicantId)
   const [bundleIdValue, setBundleIdValue] = useState(bundleId)
   const [isLoading, setIsLoading] = useState(false)
@@ -76,81 +88,143 @@ function ZipUploadZone({
     multiple: false,
     onDrop,
   })
+  
+  const handleFileChange = (key, file) => {
+    setFiles((current) => ({
+      ...current,
+      [key]: file,
+    }))
+  }
 
-  const canSubmit = useMemo(
-    () => Boolean(zipFile && applicantIdValue.trim() && bundleIdValue.trim() && !isLoading),
-    [applicantIdValue, bundleIdValue, isLoading, zipFile],
+  const canSubmitZip = Boolean(zipFile && applicantIdValue.trim() && bundleIdValue.trim() && !isLoading)
+  const canSubmitIndividual = Boolean(
+    requiredDocuments.every((doc) => files[doc.id]) && 
+    applicantIdValue.trim() && 
+    bundleIdValue.trim() && 
+    !isLoading
   )
+
+  const canSubmit = uploadMode === 'zip' ? canSubmitZip : canSubmitIndividual
 
   const handleSubmit = async () => {
     if (!canSubmit) {
       return
     }
 
-    const formData = new FormData()
-    formData.append('zip_file', zipFile)
-    formData.append('applicant_id', applicantIdValue.trim())
-    formData.append('bundle_id', bundleIdValue.trim())
-    formData.append('verification_type', verificationType)
-
     setError(null)
     setIsLoading(true)
 
     try {
-      const response = await verifyBundleZip(formData)
-      onUploadComplete(response.data)
+      if (uploadMode === 'zip') {
+        const formData = new FormData()
+        formData.append('zip_file', zipFile)
+        formData.append('applicant_id', applicantIdValue.trim())
+        formData.append('bundle_id', bundleIdValue.trim())
+        formData.append('verification_type', verificationType)
+
+        const response = await verifyBundleZip(formData)
+        onUploadComplete(response.data)
+      } else {
+        const formData = new FormData()
+        formData.append('applicant_id', applicantIdValue.trim())
+        formData.append('bundle_id', bundleIdValue.trim())
+        
+        requiredDocuments.forEach((doc) => {
+          formData.append(doc.id, files[doc.id])
+        })
+
+        const response = await verifyBundle(formData)
+        onUploadComplete(response.data)
+      }
     } catch (apiError) {
-      setError(apiError.response?.data?.detail || apiError.message || 'ZIP verification failed.')
+      setError(apiError.response?.data?.detail || apiError.message || 'Verification failed.')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="animate-rise space-y-5 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="animate-rise glass-card space-y-5 p-6">
       {demoMode ? (
-        <div className="rounded-lg border border-amber-200 bg-[#FFF8EC] px-4 py-3 text-sm font-bold text-[#854F0B]">
+        <div className="rounded-lg border border-warning/20 bg-warning/5 px-4 py-3 text-sm font-bold text-warning">
           Drop your Bundle B (fraudulent) zip file to see fraud detection in action
         </div>
       ) : null}
 
-      <div
-        {...getRootProps()}
-        className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-[12px] border-2 border-dashed bg-white p-6 text-center transition hover:border-[#2D1B8E] hover:bg-indigo-50/40 ${
-          isDragActive ? 'border-[#2D1B8E] bg-indigo-50/60' : 'border-slate-300'
-        } ${zipFile ? 'border-[#0F6E56] bg-emerald-50/60' : ''}`}
-      >
-        <input {...getInputProps({ accept: '.zip' })} />
-        {zipFile ? (
-          <>
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0F6E56] text-white">
-              <CheckCircle2 size={30} />
-            </div>
-            <p className="mt-4 text-lg font-black text-slate-950">{zipFile.name}</p>
-            <p className="mt-1 text-sm font-bold text-slate-500">{formatFileSize(zipFile.size)}</p>
-          </>
-        ) : (
-          <>
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-indigo-50 text-[#2D1B8E]">
-              <FileArchive size={31} />
-            </div>
-            <p className="mt-4 text-lg font-black text-slate-950">
-              Drag your ZIP file here or click to browse
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-500">
-              All {requiredDocuments.length} documents in one ZIP file • PDF format only
-            </p>
-          </>
-        )}
+      <div className="flex rounded-lg border border-white/[0.08] bg-surface-100 p-1">
+        <button
+          className={`flex-1 rounded-md py-2.5 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+            uploadMode === 'zip'
+              ? 'bg-surface text-primary shadow'
+              : 'text-ink-muted hover:text-ink'
+          }`}
+          onClick={() => setUploadMode('zip')}
+          type="button"
+        >
+          <FileArchive size={16} /> ZIP Archive
+        </button>
+        <button
+          className={`flex-1 rounded-md py-2.5 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+            uploadMode === 'individual'
+              ? 'bg-surface text-primary shadow'
+              : 'text-ink-muted hover:text-ink'
+          }`}
+          onClick={() => setUploadMode('individual')}
+          type="button"
+        >
+          <Files size={16} /> Individual Files
+        </button>
       </div>
+
+      {uploadMode === 'zip' ? (
+        <div
+          {...getRootProps()}
+          className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${
+            isDragActive
+              ? 'border-primary bg-primary/10 glow-border-primary'
+              : zipFile
+                ? 'border-accent-emerald/40 bg-accent-emerald/5 glow-border-emerald'
+                : 'border-white/[0.1] bg-surface-50 hover:border-primary/40 hover:bg-primary/[0.04]'
+          }`}
+        >
+          <input {...getInputProps({ accept: '.zip' })} />
+          {zipFile ? (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-emerald text-surface shadow-glow-emerald">
+                <CheckCircle2 size={30} />
+              </div>
+              <p className="mt-4 text-lg font-extrabold text-ink">{zipFile.name}</p>
+              <p className="mt-1 text-sm font-medium text-ink-muted">{formatFileSize(zipFile.size)}</p>
+            </>
+          ) : (
+            <>
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary-light">
+                <FileArchive size={31} />
+              </div>
+              <p className="mt-4 text-lg font-extrabold text-ink">
+                Drag your ZIP file here or click to browse
+              </p>
+              <p className="mt-2 text-sm font-medium text-ink-muted">
+                All {requiredDocuments.length} documents in one ZIP file • PDF format only
+              </p>
+            </>
+          )}
+        </div>
+      ) : (
+        <DocumentUploadGrid 
+          fields={requiredDocuments.map(doc => ({ key: doc.id, label: doc.label }))} 
+          files={files} 
+          onFileChange={handleFileChange} 
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-black text-slate-800" htmlFor="zip-applicant-id">
+          <label className="text-sm font-bold text-ink" htmlFor="zip-applicant-id">
             Applicant ID
           </label>
           <input
-            className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#2D1B8E] focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-lg border border-white/[0.08] bg-surface-100 px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/25"
             id="zip-applicant-id"
             required
             type="text"
@@ -159,23 +233,23 @@ function ZipUploadZone({
           />
         </div>
         <div>
-          <label className="text-sm font-black text-slate-800" htmlFor="zip-bundle-id">
+          <label className="text-sm font-bold text-ink" htmlFor="zip-bundle-id">
             Bundle ID
           </label>
           <input
-            className="mt-2 w-full rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold outline-none transition focus:border-[#2D1B8E] focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-lg border border-white/[0.08] bg-surface-100 px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/25"
             id="zip-bundle-id"
             required
             type="text"
             value={bundleIdValue}
             onChange={(event) => setBundleIdValue(event.target.value)}
           />
-          <p className="mt-2 text-xs font-semibold text-slate-500">From the registration step</p>
+          <p className="mt-2 text-xs font-medium text-ink-faint">From the registration step</p>
         </div>
       </div>
 
       <button
-        className="scanline inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0"
+        className="gradient-btn inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
         disabled={!canSubmit}
         type="button"
         onClick={handleSubmit}
@@ -185,19 +259,19 @@ function ZipUploadZone({
       </button>
 
       {isLoading ? (
-        <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
           <div className="space-y-3">
             {progressMessages.slice(0, activeStepIndex + 1).map((message, index) => {
               const isActive = index === activeStepIndex
 
               return (
-                <div key={message} className="flex items-center gap-3 text-sm font-bold text-slate-700">
+                <div key={message} className="flex items-center gap-3 text-sm font-medium">
                   {isActive ? (
-                    <Loader2 className="animate-spin text-[#2D1B8E]" size={18} />
+                    <Loader2 className="animate-spin text-primary-light" size={18} />
                   ) : (
-                    <CheckCircle2 className="text-[#0F6E56]" size={18} />
+                    <CheckCircle2 className="text-accent-emerald" size={18} />
                   )}
-                  <span>{message}</span>
+                  <span className={isActive ? 'text-primary-light' : 'text-accent-emerald'}>{message}</span>
                 </div>
               )
             })}
@@ -206,7 +280,7 @@ function ZipUploadZone({
       ) : null}
 
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-[#A32D2D]">
+        <div className="rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm font-bold text-danger">
           {error}
         </div>
       ) : null}

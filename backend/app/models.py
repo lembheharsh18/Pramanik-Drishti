@@ -58,6 +58,9 @@ class DocumentVerificationResult(BaseModel):
     hash_detail: str
     temporal_checks: list[TemporalCheckResult]
     has_fraud: bool
+    forensic_risk_level: str = "LOW"
+    forensic_risk_score: int = 0
+    forensic_flags: list[str] = Field(default_factory=list)
 
 
 class BundleVerificationResponse(BaseModel):
@@ -70,5 +73,7 @@ class BundleVerificationResponse(BaseModel):
     bundle_seal_detail: str
     document_results: list[DocumentVerificationResult]
     insight_cards: list[InsightCard]
+    forensic_analysis: list[dict] = Field(default_factory=list)
+    forensic_flags_total: int = 0
     verification_time_seconds: float
     verified_at: str

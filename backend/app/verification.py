@@ -32,8 +32,13 @@ from app.pdf_extractor import (
     extract_sale_deed_data,
     extract_text_from_pdf,
     extract_valuation_data,
+    extract_property_tax_data,
+    extract_bank_statement_data,
+    extract_gst_returns_data,
+    extract_business_registration_data,
 )
 from app.temporal_engine import run_all_temporal_checks
+from app.forensics_engine import run_forensic_analysis, generate_forensic_insight_card
 
 
 router = APIRouter(prefix="/verify", tags=["Verification"])
@@ -226,6 +231,17 @@ def verify_bundle_from_files(
                 }
             )
 
+    forensic_results = {}
+    forensic_analysis_list = []
+    forensic_flags_total = 0
+    for field_name, doc_type in FIXED_DOCUMENT_ORDER:
+        filename = files[field_name]["filename"]
+        uploaded_bytes = files[field_name]["bytes"]
+        f_result = run_forensic_analysis(uploaded_bytes, filename, doc_type)
+        forensic_results[field_name] = f_result
+        forensic_analysis_list.append(f_result)
+        forensic_flags_total += len(f_result["forensic_flags"])
+
     extracted_text = {
         field_name: extract_text_from_pdf(files[field_name]["bytes"])
         for field_name, _doc_type in FIXED_DOCUMENT_ORDER
@@ -272,6 +288,46 @@ def verify_bundle_from_files(
         bundle_seal_failed=not bundle_seal_valid,
         temporal_results=temporal_results,
     )
+    
+    for f_result in forensic_analysis_list:
+        card = generate_forensic_insight_card(f_result)
+        if card:
+            card["card_id"] = str(uuid.uuid4())
+            card["bundle_id"] = bundle_id
+            card["generated_at"] = datetime.datetime.utcnow().isoformat()
+            
+            card_data_for_hash = {
+                "card_id": card["card_id"],
+                "bundle_id": card["bundle_id"],
+                "fraud_pattern": {
+                    "pattern_id": card["pattern_id"],
+                    "pattern_name": card["pattern_name"],
+                    "affected_document": card["affected_document"],
+                    "failed_check": card["failed_check"],
+                    "explanation": card["explanation"],
+                    "recommended_actions": card["recommended_actions"],
+                    "severity": card["severity"]
+                },
+                "generated_at": card["generated_at"]
+            }
+            card["result_hash"] = compute_result_hash(card_data_for_hash)
+            
+            fp = {
+                "pattern_id": card["pattern_id"],
+                "pattern_name": card["pattern_name"],
+                "affected_document": card["affected_document"],
+                "failed_check": card["failed_check"],
+                "explanation": card["explanation"],
+                "recommended_actions": card["recommended_actions"],
+                "severity": card["severity"]
+            }
+            insight_cards.append(InsightCard(
+                card_id=card["card_id"],
+                bundle_id=card["bundle_id"],
+                fraud_pattern=fp,
+                generated_at=card["generated_at"],
+                result_hash=card["result_hash"]
+            ))
 
     _write_audit_logs(
         bundle_id=bundle_id,
@@ -292,6 +348,7 @@ def verify_bundle_from_files(
         hash_results,
         temporal_results,
         extracted_metadata,
+        forensic_results,
     )
     verification_time = time.time() - start_time
 
@@ -303,6 +360,8 @@ def verify_bundle_from_files(
         bundle_seal_detail=bundle_seal_detail,
         document_results=document_results,
         insight_cards=insight_cards,
+        forensic_analysis=forensic_analysis_list,
+        forensic_flags_total=forensic_flags_total,
         verification_time_seconds=verification_time,
         verified_at=datetime.datetime.utcnow().isoformat(),
     )
@@ -337,6 +396,9 @@ def verify_bundle_zip_from_classified_files(
     land_record_data = {}
     valuation_data = {}
     sale_deed_data = {}
+    forensic_results = {}
+    forensic_analysis_list = []
+    forensic_flags_total = 0
 
     for index, file_data in enumerate(classified_files):
         detected_type = file_data["detected_type"]
@@ -393,6 +455,12 @@ def verify_bundle_zip_from_classified_files(
 
         metadata = _extract_metadata_for_doc_type(detected_type, uploaded_bytes)
         extracted_metadata[field_name] = metadata
+        
+        f_result = run_forensic_analysis(uploaded_bytes, filename, detected_type)
+        forensic_results[field_name] = f_result
+        forensic_analysis_list.append(f_result)
+        forensic_flags_total += len(f_result["forensic_flags"])
+        
         if detected_type == "salary_slip":
             salary_slips_data.append(metadata)
         elif detected_type == "itr":
@@ -458,6 +526,7 @@ def verify_bundle_zip_from_classified_files(
         hash_results,
         temporal_results,
         extracted_metadata,
+        forensic_results,
     )
     verification_time = time.time() - start_time
 
@@ -472,6 +541,8 @@ def verify_bundle_zip_from_classified_files(
         "bundle_seal_detail": bundle_seal_detail,
         "document_results": document_results,
         "insight_cards": insight_cards,
+        "forensic_analysis": forensic_analysis_list,
+        "forensic_flags_total": forensic_flags_total,
         "verification_time_seconds": verification_time,
         "verified_at": datetime.datetime.utcnow().isoformat(),
     }
@@ -635,7 +706,11 @@ def _build_document_results(
     hash_results: list[dict],
     temporal_results: list[TemporalCheckResult],
     extracted_metadata: dict[str, dict],
+    forensic_results: dict[str, dict] = None,
 ) -> list[DocumentVerificationResult]:
+    if forensic_results is None:
+        forensic_results = {}
+        
     results = []
 
     for hash_result in hash_results:
@@ -649,6 +724,8 @@ def _build_document_results(
             _status_value(check.status) == CheckStatus.FAIL.value
             for check in related_temporal_checks
         )
+        
+        f_res = forensic_results.get(field_name, {})
 
         results.append(
             DocumentVerificationResult(
@@ -660,6 +737,9 @@ def _build_document_results(
                 hash_detail=hash_result["detail"],
                 temporal_checks=related_temporal_checks,
                 has_fraud=has_fraud,
+                forensic_risk_level=f_res.get("forensic_risk_level", "LOW"),
+                forensic_risk_score=f_res.get("forensic_risk_score", 0),
+                forensic_flags=f_res.get("forensic_flags", []),
             )
         )
 
@@ -765,4 +845,12 @@ def _extract_metadata_for_doc_type(doc_type: str, file_bytes: bytes) -> dict:
         return extract_valuation_data(full_text)
     if doc_type == "sale_deed":
         return extract_sale_deed_data(full_text)
+    if doc_type == "property_tax_receipt":
+        return extract_property_tax_data(full_text)
+    if doc_type == "bank_statement":
+        return extract_bank_statement_data(full_text)
+    if doc_type == "gst_returns":
+        return extract_gst_returns_data(full_text)
+    if doc_type == "business_registration":
+        return extract_business_registration_data(full_text)
     return {}
