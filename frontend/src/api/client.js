@@ -18,6 +18,10 @@ export function verifyBundle(formData) {
   return apiClient.post('/verify/bundle', formData, multipartHeaders)
 }
 
+export function verifyBundleZip(formData) {
+  return apiClient.post('/verify/bundle-zip', formData, multipartHeaders)
+}
+
 export function getAuditLog(bundleId) {
   return apiClient.get(`/verify/audit-log/${bundleId}`)
 }

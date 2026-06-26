@@ -1,13 +1,5 @@
-INFO:     127.0.0.1:51601 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57722 - "HEAD /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49246 - "POST /issuance/register-bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49247 - "POST /issuance/register-bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51477 - "POST /verify/bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51478 - "POST /verify/bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59814 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57128 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57179 - "OPTIONS /verify/bundle HTTP/1.1" 400 Bad Request
-INFO:     127.0.0.1:57183 - "POST /issuance/register-bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57184 - "POST /issuance/register-bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57185 - "POST /verify/bundle HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57186 - "POST /verify/bundle HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56784 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53913 - "POST /demo/run-clean HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52556 - "POST /demo/run-fraud HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58875 - "GET /verify/audit-log/e90d6a16-7527-45bb-8c4b-d5653f7b8201 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58875 - "GET /verify/audit-log/e90d6a16-7527-45bb-8c4b-d5653f7b8201 HTTP/1.1" 200 OK

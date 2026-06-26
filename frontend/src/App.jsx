@@ -1,25 +1,125 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { useState } from 'react'
 
 import Layout from './components/Layout.jsx'
+import RequiredDocumentsList from './components/RequiredDocumentsList.jsx'
+import VerificationTypeSelector, {
+  VERIFICATION_TYPES,
+} from './components/VerificationTypeSelector.jsx'
 import AuditLog from './pages/AuditLog.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Register from './pages/Register.jsx'
 import Results from './pages/Results.jsx'
 import Verify from './pages/Verify.jsx'
 
 function App() {
+  const [currentStep, setCurrentStep] = useState('select_type')
+  const [verificationType, setVerificationType] = useState(null)
+  const [requiredDocuments, setRequiredDocuments] = useState(null)
+  const [verificationResult, setVerificationResult] = useState(null)
+  const [bundleId, setBundleId] = useState(null)
+  const [demoMode, setDemoMode] = useState(false)
+  const [demoBundleId, setDemoBundleId] = useState('')
+
+  const handleTypeSelect = (selectedType, selectedDocumentIds) => {
+    const documents = VERIFICATION_TYPES[selectedType].documents.filter((document) =>
+      selectedDocumentIds.includes(document.id),
+    )
+
+    setVerificationType(selectedType)
+    setRequiredDocuments(documents)
+    setVerificationResult(null)
+    setBundleId(null)
+    setDemoMode(false)
+    setDemoBundleId('')
+    setCurrentStep('review_docs')
+  }
+
+  const handleUploadComplete = (result) => {
+    setVerificationResult(result)
+    setBundleId(result.bundle_id)
+    setCurrentStep('results')
+  }
+
+  const handleReset = () => {
+    setCurrentStep('select_type')
+    setVerificationType(null)
+    setRequiredDocuments(null)
+    setVerificationResult(null)
+    setBundleId(null)
+    setDemoMode(false)
+    setDemoBundleId('')
+  }
+
+  const handleRunDemo = () => {
+    const homeLoanDocuments = VERIFICATION_TYPES.home_loan.documents
+
+    setVerificationType('home_loan')
+    setRequiredDocuments(homeLoanDocuments)
+    setVerificationResult(null)
+    setBundleId(null)
+    setDemoMode(true)
+    setDemoBundleId(window.localStorage.getItem('demo_bundle_id') || '')
+    setCurrentStep('verify')
+  }
+
   return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify" element={<Verify />} />
-          <Route path="/results/:bundleId" element={<Results />} />
-          <Route path="/audit/:bundleId" element={<AuditLog />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+    <Layout currentStep={currentStep} onBrandClick={handleReset}>
+      {currentStep === 'select_type' ? (
+        <div className="space-y-6">
+          <div className="animate-rise rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0F6E56]">
+                  Demo mode
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#085041]">
+                  Use the pre-loaded Home Loan sample and drop Bundle B to see fraud detection in action.
+                </p>
+              </div>
+              <button
+                className="inline-flex items-center justify-center rounded-md bg-[#0F6E56] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5"
+                type="button"
+                onClick={handleRunDemo}
+              >
+                Run Demo →
+              </button>
+            </div>
+          </div>
+          <VerificationTypeSelector onSelect={handleTypeSelect} />
+        </div>
+      ) : null}
+
+      {currentStep === 'review_docs' && verificationType && requiredDocuments ? (
+        <RequiredDocumentsList
+          documents={requiredDocuments}
+          verificationType={verificationType}
+          onBack={() => setCurrentStep('select_type')}
+          onProceed={() => setCurrentStep('verify')}
+        />
+      ) : null}
+
+      {currentStep === 'verify' && verificationType && requiredDocuments ? (
+        <Verify
+          demoApplicantId={demoMode ? 'DEMO-APPLICANT-001' : ''}
+          demoBundleId={demoMode ? demoBundleId : ''}
+          demoMode={demoMode}
+          requiredDocuments={requiredDocuments}
+          verificationType={verificationType}
+          onBack={() => setCurrentStep('review_docs')}
+          onUploadComplete={handleUploadComplete}
+        />
+      ) : null}
+
+      {currentStep === 'results' ? (
+        <Results
+          result={verificationResult}
+          onVerifyAnother={handleReset}
+          onViewAudit={() => setCurrentStep('audit')}
+        />
+      ) : null}
+
+      {currentStep === 'audit' ? (
+        <AuditLog bundleId={bundleId} onBackToResults={() => setCurrentStep('results')} />
+      ) : null}
+    </Layout>
   )
 }
 

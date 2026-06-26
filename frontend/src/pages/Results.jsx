@@ -9,7 +9,6 @@ import {
   Zap,
 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import StatusBadge from '../components/StatusBadge.jsx'
 
@@ -21,11 +20,7 @@ const documentLabels = {
   sale_deed: 'Sale Deed',
 }
 
-function Results() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { bundleId } = useParams()
-  const result = location.state
+function Results({ result, onViewAudit, onVerifyAnother }) {
   const [activeDocument, setActiveDocument] = useState(null)
   const [showTemporalChecks, setShowTemporalChecks] = useState(false)
   const cardRefs = useRef({})
@@ -53,7 +48,7 @@ function Results() {
         <button
           className="mt-5 rounded-md bg-[#2D1B8E] px-4 py-2 text-sm font-black text-white"
           type="button"
-          onClick={() => navigate('/verify')}
+          onClick={onVerifyAnother}
         >
           Go to Verify
         </button>
@@ -77,6 +72,11 @@ function Results() {
 
   return (
     <section className="space-y-8">
+      <AutoClassificationSection
+        classificationSummary={result.classification_summary || []}
+        onViewAudit={onViewAudit}
+      />
+
       <div
         className={`animate-rise rounded-lg border p-6 shadow-sm ${
           hasFraud ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
@@ -100,18 +100,25 @@ function Results() {
               </h1>
             </div>
           </div>
-          <Link
+          <button
             className="inline-flex items-center justify-center rounded-md bg-[#2D1B8E] px-4 py-2 text-sm font-black text-white"
-            to={`/audit/${bundleId || result.bundle_id}`}
+            type="button"
+            onClick={onViewAudit}
           >
             View Audit Log
-          </Link>
+          </button>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-4">
         <MetricCard icon={<FileText size={20} />} label="Application ID" value={truncateMiddle(result.bundle_id, 10, 6)} />
-        <MetricCard icon={<ShieldCheck size={20} />} label="Documents Verified" value={`${result.total_documents || 7} / 7`} />
+        <MetricCard
+          icon={<ShieldCheck size={20} />}
+          label="Documents Verified"
+          value={`${result.total_documents_found || result.total_documents || 0} / ${
+            result.total_documents_expected || result.total_documents || 0
+          }`}
+        />
         <MetricCard
           accent="text-[#0F6E56]"
           icon={<Timer size={20} />}
@@ -250,20 +257,90 @@ function Results() {
       </section>
 
       <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-5">
-        <Link
+        <button
           className="scanline rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm"
-          to={`/audit/${bundleId || result.bundle_id}`}
+          type="button"
+          onClick={onViewAudit}
         >
           View Immutable Audit Log
-        </Link>
-        <Link
+        </button>
+        <button
           className="rounded-md border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm"
-          to="/verify"
+          type="button"
+          onClick={onVerifyAnother}
         >
           Verify Another Application
-        </Link>
+        </button>
       </div>
     </section>
+  )
+}
+
+function AutoClassificationSection({ classificationSummary, onViewAudit }) {
+  return (
+    <section className="animate-rise space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0F6E56]">
+          Document Auto-Classification
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">Detected document types</h2>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50 text-left text-xs font-black uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-4 py-3">Filename</th>
+              <th className="px-4 py-3">Detected Type</th>
+              <th className="px-4 py-3">Confidence</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {classificationSummary.length > 0 ? (
+              classificationSummary.map((item) => (
+                <tr key={`${item.filename}-${item.detected_type}`}>
+                  <td className="px-4 py-3 font-bold text-slate-900">{item.filename}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatLabel(item.detected_type || 'unknown')}</td>
+                  <td className="px-4 py-3">
+                    <ConfidenceBadge confidence={item.confidence} />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td className="px-4 py-5 text-sm font-semibold text-slate-500" colSpan={3}>
+                  No classification summary was returned for this verification.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <button
+        className="inline-flex rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm"
+        type="button"
+        onClick={onViewAudit}
+      >
+        View Immutable Audit Log →
+      </button>
+    </section>
+  )
+}
+
+function ConfidenceBadge({ confidence }) {
+  const styles = {
+    high: 'bg-emerald-50 text-[#0F6E56] ring-emerald-100',
+    medium: 'bg-[#FFF8EC] text-[#854F0B] ring-amber-100',
+    low: 'bg-red-50 text-[#A32D2D] ring-red-100',
+  }
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase ring-1 ${
+        styles[confidence] || styles.low
+      }`}
+    >
+      {confidence || 'low'}
+    </span>
   )
 }
 

@@ -1,10 +1,13 @@
 import datetime
+import io
 import json
 import uuid
+import zipfile
 
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 
 from app.database import get_connection, init_db
+from app.document_classifier import classify_from_zip
 from app.hash_engine import build_merkle_tree, compute_sha256
 from app.pdf_extractor import (
     extract_itr_data,
@@ -35,6 +38,44 @@ BUNDLE_DOCUMENTS = [
     ("valuation_report", "valuation_report"),
     ("sale_deed", "sale_deed"),
 ]
+
+EXPECTED_VERIFICATION_SLOTS = {
+    "home_loan": [
+        "land_record",
+        "salary_slip",
+        "salary_slip",
+        "salary_slip",
+        "itr",
+        "valuation_report",
+        "sale_deed",
+    ],
+    "business_loan": [
+        "business_registration",
+        "gst_returns",
+        "balance_sheet",
+        "bank_statement",
+        "ca_certificate",
+    ],
+    "land_mutation": [
+        "mutation_application",
+        "sale_deed",
+        "property_tax_receipt",
+        "noc",
+        "identity_proof",
+    ],
+    "msme_loan": [
+        "business_registration",
+        "itr",
+        "ca_financials",
+        "gst_certificate",
+        "bank_statement",
+    ],
+}
+
+SLOT_CLASSIFICATION_ALIASES = {
+    "ca_financials": {"balance_sheet", "ca_certificate"},
+    "gst_certificate": {"gst_returns"},
+}
 
 
 @router.post("/register-document")
@@ -116,6 +157,45 @@ async def register_bundle(
     return register_bundle_from_files(applicant_id, files)
 
 
+@router.post("/register-bundle-zip")
+async def register_bundle_zip(
+    applicant_id: str = Form(...),
+    zip_file: UploadFile = File(...),
+    verification_type: str = Form("home_loan"),
+) -> dict:
+    zip_bytes = await zip_file.read()
+    classified_documents = classify_from_zip(zip_bytes)
+    extracted_files = _extract_pdf_files_from_zip(zip_bytes)
+
+    if not classified_documents:
+        raise HTTPException(status_code=400, detail="No PDF documents found in ZIP file.")
+
+    classified_files = []
+    for result in classified_documents:
+        filename = result["filename"]
+        classified_files.append(
+            {
+                "filename": filename,
+                "bytes": extracted_files[filename],
+                "detected_type": result["doc_type"],
+                "confidence": result["confidence"],
+                "score": result["score"],
+            }
+        )
+
+    classification_summary = _build_classification_summary(
+        classified_files,
+        verification_type,
+    )
+
+    return register_bundle_zip_from_classified_files(
+        applicant_id=applicant_id,
+        verification_type=verification_type,
+        classified_files=classified_files,
+        classification_summary=classification_summary,
+    )
+
+
 def register_bundle_from_files(applicant_id: str, files: dict[str, dict]) -> dict:
     init_db()
     registered_documents = []
@@ -190,6 +270,87 @@ def register_bundle_from_files(applicant_id: str, files: dict[str, dict]) -> dic
     }
 
 
+def register_bundle_zip_from_classified_files(
+    applicant_id: str,
+    verification_type: str,
+    classified_files: list[dict],
+    classification_summary: list[dict],
+) -> dict:
+    init_db()
+    registered_documents = []
+    created_at = datetime.datetime.utcnow().isoformat()
+
+    for file_data in classified_files:
+        doc_type = file_data["detected_type"]
+        document = _process_document(
+            file_data["filename"],
+            doc_type,
+            file_data["bytes"],
+        )
+        registered_documents.append(
+            {
+                "doc_id": str(uuid.uuid4()),
+                "doc_type": doc_type,
+                "issued_at": created_at,
+                **document,
+            }
+        )
+
+    document_hashes = [document["sha256_hash"] for document in registered_documents]
+    merkle_root = build_merkle_tree(document_hashes)
+    bundle_id = str(uuid.uuid4())
+    doc_ids = [document["doc_id"] for document in registered_documents]
+
+    with get_connection() as connection:
+        for document in registered_documents:
+            connection.execute(
+                """
+                INSERT INTO document_registry (
+                    doc_id, filename, doc_type, sha256_hash, applicant_id,
+                    issued_at, metadata
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    document["doc_id"],
+                    document["filename"],
+                    document["doc_type"],
+                    document["sha256_hash"],
+                    applicant_id,
+                    document["issued_at"],
+                    json.dumps(document["metadata"], sort_keys=True),
+                ),
+            )
+
+        connection.execute(
+            """
+            INSERT INTO bundles (
+                bundle_id, applicant_id, merkle_root, doc_ids, created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                bundle_id,
+                applicant_id,
+                merkle_root,
+                json.dumps(doc_ids),
+                created_at,
+            ),
+        )
+        connection.commit()
+
+    return {
+        "bundle_id": bundle_id,
+        "applicant_id": applicant_id,
+        "verification_type": verification_type,
+        "merkle_root": merkle_root,
+        "documents_registered": len(registered_documents),
+        "classification_summary": classification_summary,
+        "doc_ids": doc_ids,
+        "message": "ZIP bundle registered and sealed. Merkle root stored.",
+    }
+
+
 def _process_document(filename: str, doc_type: str, file_bytes: bytes) -> dict:
     sha256_hash = compute_sha256(file_bytes)
     full_text = extract_text_from_pdf(file_bytes)
@@ -214,6 +375,62 @@ def _extract_metadata(doc_type: str, full_text: str) -> dict:
     if doc_type == "sale_deed":
         return extract_sale_deed_data(full_text)
     return {}
+
+
+def _extract_pdf_files_from_zip(zip_bytes: bytes) -> dict[str, bytes]:
+    files = {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+            for member in archive.infolist():
+                filename = member.filename
+                normalized_filename = filename.replace("\\", "/")
+
+                if member.is_dir() or normalized_filename.startswith("__MACOSX/"):
+                    continue
+
+                if not normalized_filename.lower().endswith(".pdf"):
+                    continue
+
+                files[filename] = archive.read(member)
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP.") from exc
+
+    return files
+
+
+def _build_classification_summary(
+    classified_files: list[dict],
+    verification_type: str,
+) -> list[dict]:
+    remaining_slots = EXPECTED_VERIFICATION_SLOTS.get(verification_type, [])[:]
+    summary = []
+
+    for file_data in classified_files:
+        matched_slot = _pop_matching_slot(remaining_slots, file_data["detected_type"])
+        item = {
+            "filename": file_data["filename"],
+            "detected_type": file_data["detected_type"],
+            "confidence": file_data["confidence"],
+            "matched_slot": matched_slot,
+        }
+        if file_data["confidence"] == "low" or file_data["detected_type"] == "unknown":
+            item["warning"] = "Document type could not be confidently identified."
+        summary.append(item)
+
+    return summary
+
+
+def _pop_matching_slot(slots: list[str], detected_type: str) -> str | None:
+    for index, slot in enumerate(slots):
+        if _slot_matches_detected_type(slot, detected_type):
+            return slots.pop(index)
+    return None
+
+
+def _slot_matches_detected_type(slot: str, detected_type: str) -> bool:
+    if slot == detected_type:
+        return True
+    return detected_type in SLOT_CLASSIFICATION_ALIASES.get(slot, set())
 
 
 _ = FastAPI

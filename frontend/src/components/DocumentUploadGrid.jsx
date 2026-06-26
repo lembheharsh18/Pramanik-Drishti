@@ -2,15 +2,16 @@ import { FileCheck2, UploadCloud } from 'lucide-react'
 
 import { DOCUMENT_FIELDS } from '../constants/documents.js'
 
-function DocumentUploadGrid({ files, onFileChange }) {
+function DocumentUploadGrid({ fields = DOCUMENT_FIELDS, files, onFileChange }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {DOCUMENT_FIELDS.map((field, index) => {
-        const selectedFile = files[field.key]
+      {fields.map((field, index) => {
+        const fieldKey = field.key || field.id
+        const selectedFile = files[fieldKey]
 
         return (
           <label
-            key={field.key}
+            key={fieldKey}
             className={`animate-rise group scanline flex min-h-36 cursor-pointer flex-col justify-between rounded-lg border bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md ${
               selectedFile
                 ? 'border-[#0F6E56] ring-1 ring-emerald-100'
@@ -29,7 +30,7 @@ function DocumentUploadGrid({ files, onFileChange }) {
               <div className="min-w-0">
                 <p className="text-sm font-black text-slate-950">{field.label}</p>
                 <p className="mt-1 truncate text-xs font-semibold text-slate-500">
-                  {selectedFile ? selectedFile.name : 'Click to upload PDF'}
+                  {selectedFile ? selectedFile.name : field.description || 'Click to upload PDF'}
                 </p>
               </div>
             </div>
@@ -53,7 +54,7 @@ function DocumentUploadGrid({ files, onFileChange }) {
               accept="application/pdf"
               className="sr-only"
               type="file"
-              onChange={(event) => onFileChange(field.key, event.target.files?.[0] || null)}
+              onChange={(event) => onFileChange(fieldKey, event.target.files?.[0] || null)}
             />
           </label>
         )

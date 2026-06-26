@@ -1,6 +1,5 @@
 import { ChevronDown, Lock, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
 
 import { getAuditLog } from '../api/client.js'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
@@ -13,8 +12,7 @@ const eventBadgeStyles = {
   INSIGHT_CARD_GENERATED: 'bg-purple-50 text-purple-700',
 }
 
-function AuditLog() {
-  const { bundleId } = useParams()
+function AuditLog({ bundleId, onBackToResults }) {
   const [entries, setEntries] = useState([])
   const [expandedIndex, setExpandedIndex] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -24,6 +22,12 @@ function AuditLog() {
     let isMounted = true
 
     async function fetchAuditLog() {
+      if (!bundleId) {
+        setError('Bundle ID is missing.')
+        setIsLoading(false)
+        return
+      }
+
       try {
         const response = await getAuditLog(bundleId)
         if (isMounted) {
@@ -123,12 +127,13 @@ function AuditLog() {
         </div>
       ) : null}
 
-      <Link
+      <button
         className="inline-flex rounded-md border border-slate-300 bg-white px-5 py-3 text-sm font-black text-[#2D1B8E] shadow-sm"
-        to={`/results/${bundleId}`}
+        type="button"
+        onClick={onBackToResults}
       >
         Back to Results
-      </Link>
+      </button>
     </section>
   )
 }

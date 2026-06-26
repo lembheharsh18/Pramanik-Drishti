@@ -1,11 +1,15 @@
 import datetime
+import io
 import json
 import time
 import uuid
+import zipfile
+from collections import defaultdict
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.database import get_connection, init_db
+from app.document_classifier import classify_from_zip
 from app.hash_engine import (
     build_merkle_tree,
     compute_result_hash,
@@ -54,6 +58,44 @@ TEMPORAL_RULE_DOCUMENTS = {
     "TEMP-07": {"sale_deed", "land_record"},
 }
 
+EXPECTED_VERIFICATION_SLOTS = {
+    "home_loan": [
+        "land_record",
+        "salary_slip",
+        "salary_slip",
+        "salary_slip",
+        "itr",
+        "valuation_report",
+        "sale_deed",
+    ],
+    "business_loan": [
+        "business_registration",
+        "gst_returns",
+        "balance_sheet",
+        "bank_statement",
+        "ca_certificate",
+    ],
+    "land_mutation": [
+        "mutation_application",
+        "sale_deed",
+        "property_tax_receipt",
+        "noc",
+        "identity_proof",
+    ],
+    "msme_loan": [
+        "business_registration",
+        "itr",
+        "ca_financials",
+        "gst_certificate",
+        "bank_statement",
+    ],
+}
+
+SLOT_CLASSIFICATION_ALIASES = {
+    "ca_financials": {"balance_sheet", "ca_certificate"},
+    "gst_certificate": {"gst_returns"},
+}
+
 
 @router.post("/bundle", response_model=BundleVerificationResponse)
 async def verify_bundle(
@@ -85,6 +127,48 @@ async def verify_bundle(
         }
 
     return verify_bundle_from_files(applicant_id, bundle_id, files)
+
+
+@router.post("/bundle-zip")
+async def verify_bundle_zip(
+    applicant_id: str = Form(...),
+    bundle_id: str = Form(...),
+    verification_type: str = Form(...),
+    zip_file: UploadFile = File(...),
+) -> dict:
+    zip_bytes = await zip_file.read()
+    classified_documents = classify_from_zip(zip_bytes)
+    extracted_files = _extract_pdf_files_from_zip(zip_bytes)
+
+    if not classified_documents:
+        raise HTTPException(status_code=400, detail="No PDF documents found in ZIP file.")
+
+    classified_files = []
+    for result in classified_documents:
+        filename = result["filename"]
+        classified_files.append(
+            {
+                "filename": filename,
+                "bytes": extracted_files[filename],
+                "detected_type": result["doc_type"],
+                "confidence": result["confidence"],
+                "score": result["score"],
+                "duplicate_index": result.get("duplicate_index"),
+            }
+        )
+
+    classification_summary = _build_classification_summary(
+        classified_files,
+        verification_type,
+    )
+
+    return verify_bundle_zip_from_classified_files(
+        applicant_id=applicant_id,
+        bundle_id=bundle_id,
+        verification_type=verification_type,
+        classified_files=classified_files,
+        classification_summary=classification_summary,
+    )
 
 
 def verify_bundle_from_files(
@@ -222,6 +306,175 @@ def verify_bundle_from_files(
         verification_time_seconds=verification_time,
         verified_at=datetime.datetime.utcnow().isoformat(),
     )
+
+
+def verify_bundle_zip_from_classified_files(
+    applicant_id: str,
+    bundle_id: str,
+    verification_type: str,
+    classified_files: list[dict],
+    classification_summary: list[dict],
+) -> dict:
+    init_db()
+    start_time = time.time()
+    verification_id = str(uuid.uuid4())
+    application_date = datetime.date.today()
+
+    stored_bundle = _fetch_bundle(bundle_id)
+    stored_doc_ids = json.loads(stored_bundle["doc_ids"])
+    stored_docs = [_fetch_registered_document(doc_id) for doc_id in stored_doc_ids]
+    stored_docs_by_type = defaultdict(list)
+    for stored_doc in stored_docs:
+        stored_docs_by_type[stored_doc["doc_type"]].append(stored_doc)
+
+    salary_slip_index = 0
+    hash_results = []
+    hash_failures = []
+    uploaded_hashes_by_doc_id = {}
+    extracted_metadata = {}
+    salary_slips_data = []
+    itr_data = {}
+    land_record_data = {}
+    valuation_data = {}
+    sale_deed_data = {}
+
+    for index, file_data in enumerate(classified_files):
+        detected_type = file_data["detected_type"]
+        matched_slot = classification_summary[index]["matched_slot"]
+        stored_doc = _pop_stored_document_for_type(
+            stored_docs_by_type,
+            detected_type,
+            matched_slot,
+        )
+        filename = file_data["filename"]
+        uploaded_bytes = file_data["bytes"]
+        computed_hash = compute_sha256(uploaded_bytes)
+
+        if detected_type == "salary_slip":
+            salary_slip_index += 1
+            field_name = f"salary_slip_{salary_slip_index}"
+        else:
+            field_name = detected_type
+
+        if stored_doc is None:
+            status = CheckStatus.FAIL
+            detail = f"No registered document found for detected type '{detected_type}'."
+            stored_hash = ""
+            doc_id = ""
+        else:
+            doc_id = stored_doc["doc_id"]
+            stored_hash = stored_doc["sha256_hash"]
+            is_valid, detail = verify_document_hash(uploaded_bytes, stored_hash)
+            status = CheckStatus.PASS if is_valid else CheckStatus.FAIL
+            uploaded_hashes_by_doc_id[doc_id] = computed_hash
+
+        hash_result = {
+            "field_name": field_name,
+            "doc_id": doc_id,
+            "filename": filename,
+            "doc_type": detected_type,
+            "stored_hash": stored_hash,
+            "computed_hash": computed_hash,
+            "status": _status_value(status),
+            "detail": detail,
+            "classification_confidence": file_data["confidence"],
+            "matched_slot": matched_slot,
+        }
+        hash_results.append(hash_result)
+
+        if status == CheckStatus.FAIL:
+            hash_failures.append(
+                {
+                    "filename": filename,
+                    "doc_type": detected_type,
+                    "detail": detail,
+                }
+            )
+
+        metadata = _extract_metadata_for_doc_type(detected_type, uploaded_bytes)
+        extracted_metadata[field_name] = metadata
+        if detected_type == "salary_slip":
+            salary_slips_data.append(metadata)
+        elif detected_type == "itr":
+            itr_data = metadata
+        elif detected_type == "land_record":
+            land_record_data = metadata
+        elif detected_type == "valuation_report":
+            valuation_data = metadata
+        elif detected_type == "sale_deed":
+            sale_deed_data = metadata
+
+    temporal_results = run_all_temporal_checks(
+        itr_data=itr_data,
+        salary_slips_data=salary_slips_data,
+        valuation_data=valuation_data,
+        sale_deed_data=sale_deed_data,
+        land_record_data=land_record_data,
+        application_date=application_date,
+    )
+
+    submitted_hashes = [
+        uploaded_hashes_by_doc_id[stored_doc["doc_id"]]
+        for stored_doc in stored_docs
+        if stored_doc["doc_id"] in uploaded_hashes_by_doc_id
+    ]
+    computed_merkle_root = build_merkle_tree(submitted_hashes)
+    bundle_seal_valid, bundle_seal_detail = verify_bundle_seal(
+        submitted_hashes,
+        stored_bundle["merkle_root"],
+    )
+    if len(submitted_hashes) != len(stored_docs):
+        bundle_seal_valid = False
+        bundle_seal_detail = (
+            "Bundle seal broken - expected "
+            f"{len(stored_docs)} registered documents but matched {len(submitted_hashes)}."
+        )
+    bundle_seal_status = CheckStatus.PASS if bundle_seal_valid else CheckStatus.FAIL
+
+    insight_cards = generate_insight_cards(
+        bundle_id=bundle_id,
+        hash_failures=hash_failures,
+        bundle_seal_failed=not bundle_seal_valid,
+        temporal_results=temporal_results,
+    )
+
+    _write_audit_logs(
+        bundle_id=bundle_id,
+        applicant_id=applicant_id,
+        verification_id=verification_id,
+        hash_results=hash_results,
+        temporal_results=temporal_results,
+        bundle_status=bundle_seal_status,
+        bundle_detail={
+            "stored_merkle_root": stored_bundle["merkle_root"],
+            "computed_merkle_root": computed_merkle_root,
+            "detail": bundle_seal_detail,
+            "classification_summary": classification_summary,
+        },
+        insight_cards=insight_cards,
+    )
+
+    document_results = _build_document_results(
+        hash_results,
+        temporal_results,
+        extracted_metadata,
+    )
+    verification_time = time.time() - start_time
+
+    return {
+        "bundle_id": bundle_id,
+        "applicant_id": applicant_id,
+        "verification_type": verification_type,
+        "classification_summary": classification_summary,
+        "total_documents_found": len(classified_files),
+        "total_documents_expected": len(EXPECTED_VERIFICATION_SLOTS.get(verification_type, [])),
+        "bundle_seal_status": _status_value(bundle_seal_status),
+        "bundle_seal_detail": bundle_seal_detail,
+        "document_results": document_results,
+        "insight_cards": insight_cards,
+        "verification_time_seconds": verification_time,
+        "verified_at": datetime.datetime.utcnow().isoformat(),
+    }
 
 
 @router.get("/audit-log/{bundle_id}")
@@ -426,3 +679,90 @@ def _loads_json(value: str | None):
         return json.loads(value)
     except json.JSONDecodeError:
         return value
+
+
+def _extract_pdf_files_from_zip(zip_bytes: bytes) -> dict[str, bytes]:
+    files = {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+            for member in archive.infolist():
+                filename = member.filename
+                normalized_filename = filename.replace("\\", "/")
+
+                if member.is_dir() or normalized_filename.startswith("__MACOSX/"):
+                    continue
+
+                if not normalized_filename.lower().endswith(".pdf"):
+                    continue
+
+                files[filename] = archive.read(member)
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP.") from exc
+
+    return files
+
+
+def _build_classification_summary(
+    classified_files: list[dict],
+    verification_type: str,
+) -> list[dict]:
+    remaining_slots = EXPECTED_VERIFICATION_SLOTS.get(verification_type, [])[:]
+    summary = []
+
+    for file_data in classified_files:
+        matched_slot = _pop_matching_slot(remaining_slots, file_data["detected_type"])
+        item = {
+            "filename": file_data["filename"],
+            "detected_type": file_data["detected_type"],
+            "confidence": file_data["confidence"],
+            "matched_slot": matched_slot,
+        }
+        if file_data["confidence"] == "low" or file_data["detected_type"] == "unknown":
+            item["warning"] = "Document type could not be confidently identified."
+        summary.append(item)
+
+    return summary
+
+
+def _pop_matching_slot(slots: list[str], detected_type: str) -> str | None:
+    for index, slot in enumerate(slots):
+        if _slot_matches_detected_type(slot, detected_type):
+            return slots.pop(index)
+    return None
+
+
+def _slot_matches_detected_type(slot: str, detected_type: str) -> bool:
+    if slot == detected_type:
+        return True
+    return detected_type in SLOT_CLASSIFICATION_ALIASES.get(slot, set())
+
+
+def _pop_stored_document_for_type(
+    stored_docs_by_type: dict[str, list],
+    detected_type: str,
+    matched_slot: str | None,
+):
+    if stored_docs_by_type.get(detected_type):
+        return stored_docs_by_type[detected_type].pop(0)
+
+    if matched_slot:
+        for stored_type, stored_docs in stored_docs_by_type.items():
+            if stored_docs and _slot_matches_detected_type(matched_slot, stored_type):
+                return stored_docs.pop(0)
+
+    return None
+
+
+def _extract_metadata_for_doc_type(doc_type: str, file_bytes: bytes) -> dict:
+    full_text = extract_text_from_pdf(file_bytes)
+    if doc_type == "land_record":
+        return extract_land_record_data(full_text)
+    if doc_type == "salary_slip":
+        return extract_salary_slip_data(full_text)
+    if doc_type == "itr":
+        return extract_itr_data(full_text)
+    if doc_type == "valuation_report":
+        return extract_valuation_data(full_text)
+    if doc_type == "sale_deed":
+        return extract_sale_deed_data(full_text)
+    return {}

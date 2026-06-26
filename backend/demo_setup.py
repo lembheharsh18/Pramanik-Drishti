@@ -1,79 +1,43 @@
 import json
+import os
 from pathlib import Path
 
-import requests
+from app.demo import CLEAN_FILES, FRAUD_FILES, SAMPLE_DIR
+from app.issuance import register_bundle_from_files
+from app.verification import verify_bundle_from_files
 
 
-BASE_URL = "http://127.0.0.1:8000"
 BACKEND_DIR = Path(__file__).parent
-SAMPLE_DIR = BACKEND_DIR / "sample_docs"
 BUNDLE_IDS_PATH = BACKEND_DIR / "bundle_ids.json"
 
-CLEAN_FILES = {
-    "land_record": "land_record_clean.pdf",
-    "salary_slip_1": "salary_slip_jan_clean.pdf",
-    "salary_slip_2": "salary_slip_feb_clean.pdf",
-    "salary_slip_3": "salary_slip_mar_clean.pdf",
-    "itr": "itr_clean.pdf",
-    "valuation_report": "valuation_report_clean.pdf",
-    "sale_deed": "sale_deed_clean.pdf",
-}
 
-FRAUD_FILES = {
-    "land_record": "land_record_fraud.pdf",
-    "salary_slip_1": "salary_slip_jan_fraud.pdf",
-    "salary_slip_2": "salary_slip_feb_fraud.pdf",
-    "salary_slip_3": "salary_slip_apr_fraud.pdf",
-    "itr": "itr_fraud.pdf",
-    "valuation_report": "valuation_report_fraud.pdf",
-    "sale_deed": "sale_deed_fraud.pdf",
-}
+def load_sample_files(file_map: dict[str, str]) -> dict[str, dict]:
+    files = {}
+    for field_name, filename in file_map.items():
+        path = SAMPLE_DIR / filename
+        files[field_name] = {
+            "filename": filename,
+            "bytes": path.read_bytes(),
+        }
+    return files
 
 
 def register_bundle(applicant_id: str, file_map: dict[str, str]) -> dict:
-    with open_files(file_map) as files:
-        response = requests.post(
-            f"{BASE_URL}/issuance/register-bundle",
-            data={"applicant_id": applicant_id},
-            files=files,
-            timeout=60,
-        )
-    response.raise_for_status()
-    return response.json()
+    return register_bundle_from_files(applicant_id, load_sample_files(file_map))
 
 
 def verify_bundle(applicant_id: str, bundle_id: str, file_map: dict[str, str]) -> dict:
-    with open_files(file_map) as files:
-        response = requests.post(
-            f"{BASE_URL}/verify/bundle",
-            data={"applicant_id": applicant_id, "bundle_id": bundle_id},
-            files=files,
-            timeout=60,
-        )
-    response.raise_for_status()
-    return response.json()
-
-
-class open_files:
-    def __init__(self, file_map: dict[str, str]):
-        self.file_map = file_map
-        self.handles = []
-
-    def __enter__(self):
-        upload_files = {}
-        for field_name, filename in self.file_map.items():
-            path = SAMPLE_DIR / filename
-            handle = path.open("rb")
-            self.handles.append(handle)
-            upload_files[field_name] = (filename, handle, "application/pdf")
-        return upload_files
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        for handle in self.handles:
-            handle.close()
+    result = verify_bundle_from_files(
+        applicant_id,
+        bundle_id,
+        load_sample_files(file_map),
+    )
+    return result.model_dump()
 
 
 def main() -> None:
+    os.chdir(BACKEND_DIR)
+
     print("Registering Bundle A (clean)...")
     clean_registration = register_bundle("APP-CLEAN-001", CLEAN_FILES)
     print(f"Clean bundle_id: {clean_registration['bundle_id']}")
@@ -87,6 +51,7 @@ def main() -> None:
     bundle_ids = {
         "clean": clean_registration["bundle_id"],
         "fraud": fraud_registration["bundle_id"],
+        "demo_bundle_id": fraud_registration["bundle_id"],
     }
     BUNDLE_IDS_PATH.write_text(json.dumps(bundle_ids, indent=2), encoding="utf-8")
     print(f"Saved bundle IDs to {BUNDLE_IDS_PATH}")

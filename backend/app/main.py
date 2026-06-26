@@ -51,6 +51,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event() -> None:
     init_db()
+    print("PRAMANIK-DRISHTI running in OFFLINE MODE — no external connections required")
 
 
 app.include_router(issuance_router)
@@ -66,4 +67,17 @@ def root() -> dict:
         "version": "1.0.0",
         "status": "operational",
         "docs": "/docs",
+    }
+
+
+@app.get("/system/status")
+def system_status() -> dict:
+    return {
+        "status": "operational",
+        "mode": "offline",
+        "external_api_calls": False,
+        "internet_required": False,
+        "database": "sqlite_local",
+        "verification_engine": "local_only",
+        "message": "All processing happens on this machine. No data leaves this server.",
     }

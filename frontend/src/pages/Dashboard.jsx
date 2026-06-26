@@ -9,15 +9,12 @@ import {
   Shield,
   ShieldCheck,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 
 import { runCleanDemo, runFraudDemo } from '../api/client.js'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
 
-function Dashboard() {
-  const navigate = useNavigate()
+function Dashboard({ onRegister, onVerify, onResults, onRunDemo }) {
   const [demoLoading, setDemoLoading] = useState(null)
   const [demoError, setDemoError] = useState(null)
 
@@ -28,7 +25,7 @@ function Dashboard() {
     try {
       const response = type === 'clean' ? await runCleanDemo() : await runFraudDemo()
       const verification = response.data.verification
-      navigate(`/results/${verification.bundle_id}`, { state: verification })
+      onResults?.(verification)
     } catch (apiError) {
       setDemoError(apiError.response?.data?.detail || apiError.message || 'Demo run failed.')
     } finally {
@@ -54,13 +51,28 @@ function Dashboard() {
             Authentic Vision - the document that sees its own truth
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link className="scanline inline-flex items-center gap-2 rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950" to="/register">
+            <button
+              className="scanline inline-flex items-center gap-2 rounded-md bg-[#2D1B8E] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-950"
+              type="button"
+              onClick={onRegister}
+            >
               Register Documents <ArrowRight size={16} />
-            </Link>
-            <Link className="inline-flex items-center gap-2 rounded-md border border-[#2D1B8E] bg-white px-5 py-3 text-sm font-black text-[#2D1B8E] shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-50" to="/verify">
+            </button>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border border-[#2D1B8E] bg-white px-5 py-3 text-sm font-black text-[#2D1B8E] shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-50"
+              type="button"
+              onClick={onVerify}
+            >
               Verify Application <ShieldCheck size={16} />
-            </Link>
+            </button>
           </div>
+          <button
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-[#0F6E56] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5"
+            type="button"
+            onClick={onRunDemo}
+          >
+            Run Demo <ArrowRight size={16} />
+          </button>
           <div className="mt-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0F6E56]">
               Judge demo mode
