@@ -14,6 +14,10 @@ export function registerBundle(formData) {
   return apiClient.post('/issuance/register-bundle', formData, multipartHeaders)
 }
 
+export function registerBundleZip(formData) {
+  return apiClient.post('/issuance/register-bundle-zip', formData, multipartHeaders)
+}
+
 export function verifyBundle(formData) {
   return apiClient.post('/verify/bundle', formData, multipartHeaders)
 }

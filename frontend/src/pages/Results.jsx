@@ -24,6 +24,7 @@ const documentLabels = {
 function Results({ result, onViewAudit, onVerifyAnother }) {
   const [activeDocument, setActiveDocument] = useState(null)
   const [showTemporalChecks, setShowTemporalChecks] = useState(false)
+  const [showCaseDetails, setShowCaseDetails] = useState(false)
   const cardRefs = useRef({})
 
   const temporalRows = useMemo(() => {
@@ -73,11 +74,6 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
 
   return (
     <section className="space-y-8">
-      <AutoClassificationSection
-        classificationSummary={result.classification_summary || []}
-        onViewAudit={onViewAudit}
-      />
-
       {/* Verdict Banner */}
       <div
         className={`animate-rise rounded-xl border p-6 ${
@@ -99,11 +95,12 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">
-                Verification Result
+                Final Verdict
               </p>
               <h1 className={`mt-1 text-3xl font-extrabold ${hasFraud ? 'text-danger' : 'text-accent-emerald'}`}>
-                {hasFraud ? 'Fraud Signals Detected' : 'Application Verified'}
+                {decisionBrief.recommendation}
               </h1>
+              <p className="mt-1 text-sm font-medium text-ink-muted">{decisionBrief.summary}</p>
             </div>
           </div>
           <button
@@ -118,7 +115,8 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
 
       {/* Metric Cards */}
       <div className="grid gap-4 lg:grid-cols-4">
-        <MetricCard icon={<FileText size={20} />} label="Application ID" value={truncateMiddle(result.bundle_id, 10, 6)} />
+        <MetricCard icon={<FileText size={20} />} label="Applicant ID" value={result.applicant_id || 'N/A'} />
+        <MetricCard icon={<Fingerprint size={20} />} label="Bundle ID" value={truncateMiddle(result.bundle_id, 10, 6)} />
         <MetricCard
           icon={<ShieldCheck size={20} />}
           label="Documents Verified"
@@ -138,16 +136,44 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
           label="Fraud Signals"
           value={hasFraud ? String(insightCount) : 'None'}
         />
-        <MetricCard
-          accent={(result.forensic_flags_total || 0) > 0 ? 'text-danger' : 'text-accent-emerald'}
-          icon={<Fingerprint size={20} />}
-          label="Forensic Flags"
-          value={String(result.forensic_flags_total || 0)}
-        />
       </div>
 
       {/* Decision Brief */}
       <DecisionBrief brief={decisionBrief} />
+
+      <section className="animate-rise rounded-xl border border-white/[0.08] bg-surface-100 p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-extrabold text-ink">Case evidence and technical checks</p>
+            <p className="mt-1 text-sm font-medium text-ink-muted">
+              Keep the verdict uncluttered. Open details only when the underwriter needs supporting evidence.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              className="rounded-lg border border-white/[0.08] bg-surface px-4 py-2.5 text-sm font-bold text-primary-light transition hover:border-primary/30 hover:bg-primary/[0.06]"
+              type="button"
+              onClick={() => setShowCaseDetails((current) => !current)}
+            >
+              {showCaseDetails ? 'Hide Details' : 'View Details'}
+            </button>
+            <button
+              className="gradient-btn rounded-lg px-4 py-2.5 text-sm font-bold text-white"
+              type="button"
+              onClick={onViewAudit}
+            >
+              Audit Log
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {showCaseDetails ? (
+        <>
+          <AutoClassificationSection
+            classificationSummary={result.classification_summary || []}
+            onViewAudit={onViewAudit}
+          />
 
       {/* Timeline + Metadata */}
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -282,6 +308,8 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
           </div>
         ) : null}
       </section>
+        </>
+      ) : null}
 
       {/* Bottom Actions */}
       <div className="flex flex-wrap gap-3 border-t border-white/[0.06] pt-5">
@@ -425,21 +453,15 @@ function DecisionBrief({ brief }) {
   const tone = toneMap[brief.recommendation] || toneMap.Reject
 
   return (
-    <section className={`animate-rise rounded-xl border p-5 ${tone.border} ${tone.bg} ${tone.glow}`}>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className={`animate-rise rounded-xl border p-5 ${tone.border} ${tone.bg}`}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">
-            Underwriter Decision Brief
-          </p>
-          <h2 className={`mt-2 text-3xl font-extrabold ${tone.text}`}>
-            Recommendation: {brief.recommendation}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-ink-muted">{brief.summary}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">Decision Basis</p>
+          <h2 className={`mt-2 text-xl font-extrabold ${tone.text}`}>{brief.primarySignal}</h2>
         </div>
-        <div className="glass-inset rounded-lg p-4 text-sm">
-          <p className="font-bold text-ink">Primary signal</p>
-          <p className="mt-1 text-ink-muted">{brief.primarySignal}</p>
-        </div>
+        <span className={`w-fit rounded-full border px-3 py-1 text-xs font-extrabold uppercase ${tone.border} ${tone.text}`}>
+          {brief.recommendation}
+        </span>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {brief.evidence.map((item) => (
@@ -632,8 +654,7 @@ function buildDecisionBrief(result) {
     return {
       recommendation: 'Approve',
       primarySignal: 'No fraud pattern detected',
-      summary:
-        'The bundle seal is intact, every document hash matches its issuance record, and temporal logic checks did not find contradictions.',
+      summary: 'No fraud signals found. Case may proceed to underwriting.',
       evidence: ['Hash integrity confirmed', 'Bundle seal intact', 'Temporal rules passed'],
     }
   }
@@ -648,8 +669,8 @@ function buildDecisionBrief(result) {
     primarySignal,
     summary:
       recommendation === 'Reject'
-        ? 'High-severity fraud evidence was found before human review. The underwriter should not proceed without escalation.'
-        : 'Medium-severity inconsistencies were found. The case should be manually reviewed before any underwriting decision.',
+        ? 'High-severity fraud signal found. Escalate before proceeding.'
+        : 'Inconsistency found. Manual review required before decision.',
     evidence,
   }
 }

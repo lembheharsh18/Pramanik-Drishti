@@ -1,0 +1,27 @@
+
+> frontend@0.0.0 dev
+> vite --host 127.0.0.1
+
+
+  VITE v8.0.16  ready in 539 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+11:38:40 pm [vite] (client) hmr update /src/components/Layout.jsx, /src/index.css
+11:38:58 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:39:10 pm [vite] (client) hmr update /src/index.css, /src/pages/Register.jsx
+11:41:38 pm [vite] (client) hmr update /src/index.css, /src/pages/AuditLog.jsx, /src/components/ZipUploadZone.jsx, /src/pages/Register.jsx
+11:42:31 pm [vite] (client) hmr update /src/index.css, /src/pages/Register.jsx
+11:50:50 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:51:11 pm [vite] (client) hmr update /src/pages/Results.jsx, /src/index.css
+11:51:26 pm [vite] (client) hmr update /src/pages/Results.jsx, /src/index.css
+11:51:35 pm [vite] (client) hmr update /src/pages/Results.jsx, /src/index.css
+11:51:43 pm [vite] (client) hmr update /src/pages/Results.jsx, /src/index.css
+11:52:22 pm [vite] (client) hmr update /src/index.css
+11:52:43 pm [vite] (client) hmr update /src/index.css
+11:52:50 pm [vite] (client) hmr update /src/components/Layout.jsx, /src/index.css
+11:55:29 pm [vite] (client) hmr update /src/index.css, /src/components/ZipUploadZone.jsx
+11:55:36 pm [vite] (client) hmr update /src/pages/Verify.jsx, /src/index.css
+11:55:53 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:56:19 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:56:28 pm [vite] (client) hmr update /src/components/Layout.jsx, /src/index.css
+11:56:39 pm [vite] (client) hmr update /src/index.css, /src/components/ZipUploadZone.jsx

@@ -1,16 +1,17 @@
 import { Check, ShieldCheck } from 'lucide-react'
 
 const stepItems = [
-  { key: 'select_type', label: 'Select Type' },
+  { key: 'home', label: 'Main' },
+  { key: 'select_type', label: 'Detection Type' },
   { key: 'review_docs', label: 'Review Docs' },
-  { key: 'verify', label: 'Upload & Verify' },
-  { key: 'results', label: 'Results' },
+  { key: 'verify', label: 'Upload & Run' },
+  { key: 'results', label: 'Verdict' },
 ]
 
 const stepOrder = stepItems.map((step) => step.key)
 
 function Layout({ children, currentStep = 'select_type', onBrandClick }) {
-  const activeStep = currentStep === 'audit' ? 'results' : currentStep
+  const activeStep = currentStep === 'audit' ? 'results' : currentStep === 'register' ? 'select_type' : currentStep
   const activeStepIndex = Math.max(0, stepOrder.indexOf(activeStep))
 
   return (
@@ -41,16 +42,16 @@ function Layout({ children, currentStep = 'select_type', onBrandClick }) {
 
           <div
             className="inline-flex w-fit items-center gap-2 rounded-full border border-accent-emerald/20 bg-accent-emerald/10 px-3 py-1.5 text-xs font-bold text-accent-emerald"
-            title="All verification runs locally. No internet connection required."
+            title="Internal document verification workflow"
           >
             <span className="glow-dot-emerald" />
-            Offline Mode
+            Bank Ops Console
           </div>
         </nav>
 
         {/* Step indicator bar */}
         <div className="border-t border-white/[0.04] bg-surface/60">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-3 md:grid-cols-4">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-3 px-6 py-3 md:grid-cols-5">
             {stepItems.map((step, index) => {
               const isCurrent = step.key === activeStep
               const isComplete = index < activeStepIndex

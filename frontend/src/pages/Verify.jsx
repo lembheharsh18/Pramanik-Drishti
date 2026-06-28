@@ -9,6 +9,7 @@ function Verify({
   demoMode = false,
   demoApplicantId = '',
   demoBundleId = '',
+  autoRegister = false,
 }) {
   const selectedVerification = VERIFICATION_TYPES[verificationType]
 
@@ -50,6 +51,7 @@ function Verify({
       </div>
 
       <ZipUploadZone
+        autoRegister={autoRegister}
         applicantId={demoApplicantId}
         bundleId={demoBundleId}
         demoMode={demoMode}

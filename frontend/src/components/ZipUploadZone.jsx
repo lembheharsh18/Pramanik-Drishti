@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2, FileArchive, Loader2, Files } from 'lucide-re
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-import { verifyBundle, verifyBundleZip } from '../api/client.js'
+import { registerBundleZip, verifyBundle, verifyBundleZip } from '../api/client.js'
 import DocumentUploadGrid from './DocumentUploadGrid.jsx'
 
 const progressMessages = [
@@ -34,6 +34,7 @@ function ZipUploadZone({
   bundleId = '',
   applicantId = '',
   demoMode = false,
+  autoRegister = false,
 }) {
   const [uploadMode, setUploadMode] = useState('zip') // 'zip' or 'individual'
   const [zipFile, setZipFile] = useState(null)
@@ -96,7 +97,9 @@ function ZipUploadZone({
     }))
   }
 
-  const canSubmitZip = Boolean(zipFile && applicantIdValue.trim() && bundleIdValue.trim() && !isLoading)
+  const canSubmitZip = Boolean(
+    zipFile && applicantIdValue.trim() && (autoRegister || bundleIdValue.trim()) && !isLoading,
+  )
   const canSubmitIndividual = Boolean(
     requiredDocuments.every((doc) => files[doc.id]) && 
     applicantIdValue.trim() && 
@@ -119,9 +122,22 @@ function ZipUploadZone({
         const formData = new FormData()
         formData.append('zip_file', zipFile)
         formData.append('applicant_id', applicantIdValue.trim())
-        formData.append('bundle_id', bundleIdValue.trim())
         formData.append('verification_type', verificationType)
 
+        if (autoRegister) {
+          const registrationResponse = await registerBundleZip(formData)
+          const verificationFormData = new FormData()
+          verificationFormData.append('zip_file', zipFile)
+          verificationFormData.append('applicant_id', registrationResponse.data.applicant_id)
+          verificationFormData.append('bundle_id', registrationResponse.data.bundle_id)
+          verificationFormData.append('verification_type', verificationType)
+
+          const response = await verifyBundleZip(verificationFormData)
+          onUploadComplete(response.data)
+          return
+        }
+
+        formData.append('bundle_id', bundleIdValue.trim())
         const response = await verifyBundleZip(formData)
         onUploadComplete(response.data)
       } else {
@@ -151,6 +167,11 @@ function ZipUploadZone({
         </div>
       ) : null}
 
+      {autoRegister ? (
+        <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-4 py-3 text-sm font-bold text-primary-light">
+          New detection mode: upload one ZIP. A baseline seal will be created automatically before checks run.
+        </div>
+      ) : (
       <div className="flex rounded-lg border border-white/[0.08] bg-surface-100 p-1">
         <button
           className={`flex-1 rounded-md py-2.5 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
@@ -175,8 +196,9 @@ function ZipUploadZone({
           <Files size={16} /> Individual Files
         </button>
       </div>
+      )}
 
-      {uploadMode === 'zip' ? (
+      {autoRegister || uploadMode === 'zip' ? (
         <div
           {...getRootProps()}
           className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${
@@ -218,7 +240,7 @@ function ZipUploadZone({
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={`grid gap-4 ${autoRegister ? '' : 'md:grid-cols-2'}`}>
         <div>
           <label className="text-sm font-bold text-ink" htmlFor="zip-applicant-id">
             Applicant ID
@@ -232,6 +254,7 @@ function ZipUploadZone({
             onChange={(event) => setApplicantIdValue(event.target.value)}
           />
         </div>
+        {!autoRegister ? (
         <div>
           <label className="text-sm font-bold text-ink" htmlFor="zip-bundle-id">
             Bundle ID
@@ -246,6 +269,7 @@ function ZipUploadZone({
           />
           <p className="mt-2 text-xs font-medium text-ink-faint">From the registration step</p>
         </div>
+        ) : null}
       </div>
 
       <button

@@ -4,23 +4,23 @@
 
 /* ─── Design Tokens ─── */
 :root {
-  --surface: #0A0E1A;
-  --surface-50: #0D1225;
-  --surface-100: #111630;
-  --surface-200: #161C3D;
-  --surface-300: #1E2548;
-  --primary: #6C5CE7;
-  --primary-light: #A29BFE;
-  --primary-glow: rgba(108, 92, 231, 0.25);
-  --accent-emerald: #00D9A6;
-  --accent-emerald-glow: rgba(0, 217, 166, 0.20);
-  --danger: #FF4757;
-  --danger-glow: rgba(255, 71, 87, 0.25);
-  --warning: #FFB74D;
-  --warning-glow: rgba(255, 183, 77, 0.20);
-  --ink: #E8E9F0;
-  --ink-muted: #8B8FA3;
-  --ink-faint: #5A5F75;
+  --surface: #07111F;
+  --surface-50: #0B1728;
+  --surface-100: #102033;
+  --surface-200: #172B42;
+  --surface-300: #223853;
+  --primary: #1D4ED8;
+  --primary-light: #60A5FA;
+  --primary-glow: rgba(29, 78, 216, 0.18);
+  --accent-emerald: #14B8A6;
+  --accent-emerald-glow: rgba(20, 184, 166, 0.16);
+  --danger: #DC2626;
+  --danger-glow: rgba(220, 38, 38, 0.18);
+  --warning: #D97706;
+  --warning-glow: rgba(217, 119, 6, 0.16);
+  --ink: #F1F5F9;
+  --ink-muted: #A7B3C6;
+  --ink-faint: #718096;
 }
 
 /* ─── Base ─── */
@@ -28,10 +28,7 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   background-color: var(--surface);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(0, 217, 166, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 30% at 50% 80%, rgba(255, 71, 87, 0.04) 0%, transparent 60%);
+  background-image: linear-gradient(180deg, #07111F 0%, #0B1728 100%);
   color: var(--ink);
 }
 
@@ -61,12 +58,10 @@ body {
 
 /* ─── Glassmorphism Utilities ─── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  background: rgba(16, 32, 51, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .glass-card-hover {
@@ -74,9 +69,9 @@ body {
 }
 
 .glass-card-hover:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(108, 92, 231, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(108, 92, 231, 0.1);
+  background: rgba(23, 43, 66, 0.98);
+  border-color: rgba(96, 165, 250, 0.32);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   transform: translateY(-2px);
 }
 
@@ -88,40 +83,30 @@ body {
 
 /* ─── Gradient Utilities ─── */
 .gradient-strip {
-  background: linear-gradient(90deg, #6C5CE7, #00D9A6, #FF4757, #6C5CE7);
-  background-size: 300% 100%;
-  animation: gradientFlow 6s linear infinite;
+  background: linear-gradient(90deg, #1D4ED8, #14B8A6, #D97706);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #6C5CE7, #A29BFE, #00D9A6);
+  background: linear-gradient(135deg, #60A5FA, #14B8A6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-btn {
-  background: linear-gradient(135deg, #6C5CE7, #5A4BD1);
+  background: #1D4ED8;
   position: relative;
   overflow: hidden;
   transition: all 300ms ease;
 }
 
 .gradient-btn:hover {
-  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.4);
+  box-shadow: 0 8px 20px rgba(29, 78, 216, 0.24);
   transform: translateY(-1px);
 }
 
 .gradient-btn::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-  transform: skewX(-18deg);
-  animation: shimmer 3s ease-in-out infinite;
+  display: none;
 }
 
 .gradient-btn:disabled {
@@ -136,19 +121,19 @@ body {
 
 /* ─── Glow Borders ─── */
 .glow-border-primary {
-  box-shadow: 0 0 0 1px rgba(108, 92, 231, 0.4), 0 0 20px rgba(108, 92, 231, 0.15);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.32);
 }
 
 .glow-border-emerald {
-  box-shadow: 0 0 0 1px rgba(0, 217, 166, 0.4), 0 0 20px rgba(0, 217, 166, 0.15);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.32);
 }
 
 .glow-border-danger {
-  box-shadow: 0 0 0 1px rgba(255, 71, 87, 0.4), 0 0 20px rgba(255, 71, 87, 0.15);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.32);
 }
 
 .glow-border-warning {
-  box-shadow: 0 0 0 1px rgba(255, 183, 77, 0.4), 0 0 20px rgba(255, 183, 77, 0.15);
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.32);
 }
 
 /* ─── Status Glow Dots ─── */
