@@ -24,8 +24,16 @@ def load_env_file() -> None:
 
 
 load_env_file()
+
+
+def normalize_origin(origin: str) -> str:
+    if origin == "*" or "://" in origin:
+        return origin.rstrip("/")
+    return f"https://{origin.rstrip('/')}"
+
+
 allowed_origins = [
-    origin.strip()
+    normalize_origin(origin.strip())
     for origin in os.getenv(
         "ALLOWED_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000",

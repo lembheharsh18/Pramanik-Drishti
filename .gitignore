@@ -1,0 +1,30 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local SQLite/demo state
+*.db
+backend/bundle_ids.json
+
+# Node/Vite
+node_modules/
+dist/
+dist-ssr/
+
+# Logs
+logs/
+*.log
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
