@@ -37,17 +37,19 @@ https://pramanik-drishti-api.onrender.com
 
 1. Open Vercel and create a new project.
 2. Import `https://github.com/lembheharsh18/Pramanik-Drishti`.
-3. Use these settings:
+3. Keep the project root as the repository root.
+4. Vercel will read `vercel.json`, which defines one service:
 
 ```text
-Framework Preset: Vite
-Root Directory: frontend
+Service: frontend
+Root: frontend
+Framework: vite
+Install Command: npm install
 Build Command: npm run build
 Output Directory: dist
-Install Command: npm install
 ```
 
-4. Add this environment variable:
+5. Add this environment variable:
 
 ```text
 VITE_API_BASE_URL=<your Render backend URL>
@@ -59,8 +61,8 @@ Example:
 VITE_API_BASE_URL=https://pramanik-drishti-api.onrender.com
 ```
 
-5. Deploy the project.
-6. Copy the Vercel frontend URL, for example:
+6. Deploy the project.
+7. Copy the Vercel frontend URL, for example:
 
 ```text
 https://pramanik-drishti.vercel.app
