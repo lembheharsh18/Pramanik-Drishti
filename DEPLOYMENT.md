@@ -1,58 +1,96 @@
 # Deployment
 
-This repo includes a Render blueprint in `render.yaml` for:
+Deploy the backend on Render and the frontend on Vercel.
 
-- `pramanik-drishti-api`: FastAPI backend
-- `pramanik-drishti-web`: Vite/React frontend
+## 1. Backend on Render
 
-The frontend receives the backend host through `VITE_API_BASE_URL`, and the backend receives the frontend host through `ALLOWED_ORIGINS`. The app accepts either full URLs or Render hostnames.
+1. Open Render and create a new Web Service.
+2. Connect `https://github.com/lembheharsh18/Pramanik-Drishti`.
+3. Use these settings:
 
-## 1. Commit and push
-
-```powershell
-git status
-git add .
-git commit -m "Prepare Render deployment"
-git push origin main
+```text
+Name: pramanik-drishti-api
+Root Directory: backend
+Runtime: Python
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Local `.env`, SQLite database, and Python cache files are ignored by `.gitignore`.
-
-## 2. Create the Render blueprint
-
-1. Open Render.
-2. Create a new Blueprint.
-3. Connect `https://github.com/lembheharsh18/Pramanik-Drishti`.
-4. Select the repo root as the blueprint source.
-5. Apply the services from `render.yaml`.
-
-## 3. Deploy values
-
-The blueprint sets these automatically:
-
-Backend:
+4. Add environment variables:
 
 ```text
 PYTHON_VERSION=3.11.9
-DATABASE_PATH=/var/data/pramanik.db
-ALLOWED_ORIGINS=<frontend Render hostname>
+DATABASE_PATH=pramanik.db
+ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-Frontend:
+5. Deploy the service.
+6. Copy the backend URL, for example:
 
 ```text
-VITE_API_BASE_URL=<backend Render hostname>
+https://pramanik-drishti-api.onrender.com
 ```
+
+7. Open `<backend-url>/docs` and confirm Swagger loads.
+
+## 2. Frontend on Vercel
+
+1. Open Vercel and create a new project.
+2. Import `https://github.com/lembheharsh18/Pramanik-Drishti`.
+3. Use these settings:
+
+```text
+Framework Preset: Vite
+Root Directory: frontend
+Build Command: npm run build
+Output Directory: dist
+Install Command: npm install
+```
+
+4. Add this environment variable:
+
+```text
+VITE_API_BASE_URL=<your Render backend URL>
+```
+
+Example:
+
+```text
+VITE_API_BASE_URL=https://pramanik-drishti-api.onrender.com
+```
+
+5. Deploy the project.
+6. Copy the Vercel frontend URL, for example:
+
+```text
+https://pramanik-drishti.vercel.app
+```
+
+## 3. Update Render CORS
+
+After Vercel gives you the frontend URL, go back to the Render backend service and update:
+
+```text
+ALLOWED_ORIGINS=<your Vercel frontend URL>
+```
+
+Example:
+
+```text
+ALLOWED_ORIGINS=https://pramanik-drishti.vercel.app
+```
+
+Redeploy the Render backend after changing this value.
 
 ## 4. Verify
 
-After both services finish deploying:
+1. Open the backend root URL and confirm it returns `status: operational`.
+2. Open `<backend-url>/docs` and confirm Swagger loads.
+3. Open the Vercel frontend URL.
+4. Register a bundle.
+5. Copy the returned bundle ID.
+6. Verify the same bundle with the same documents.
 
-1. Open the backend URL and confirm it returns `status: operational`.
-2. Open `<backend-url>/docs` to confirm Swagger loads.
-3. Open the frontend URL.
-4. Register a bundle, then verify the same documents.
+## Note About Free Render
 
-## Notes
-
-The backend uses SQLite. The blueprint mounts a persistent disk at `/var/data` so registered bundles survive restarts and redeploys. If you switch to a free/ephemeral backend service without a disk, demo data can disappear after restarts.
+On Render's free web service, the local SQLite database is ephemeral. The app will work for demos, but registered bundles can disappear after restarts, redeploys, or service sleep/wake cycles. Persistent SQLite storage requires a paid Render disk or moving the backend to a hosted database.
