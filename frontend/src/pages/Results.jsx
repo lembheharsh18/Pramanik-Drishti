@@ -95,7 +95,7 @@ function Results({ result, onViewAudit, onVerifyAnother }) {
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">
-                Final Verdict
+                Checker Guidance
               </p>
               <h1 className={`mt-1 text-3xl font-extrabold ${hasFraud ? 'text-danger' : 'text-accent-emerald'}`}>
                 {decisionBrief.recommendation}
@@ -428,7 +428,7 @@ function MetricCard({ icon, label, value, accent = 'text-ink' }) {
 
 function DecisionBrief({ brief }) {
   const toneMap = {
-    Approve: {
+    'Proceed with Standard Checks': {
       border: 'border-accent-emerald/30',
       bg: 'bg-accent-emerald/[0.06]',
       text: 'text-accent-emerald',
@@ -442,7 +442,7 @@ function DecisionBrief({ brief }) {
       glow: 'glow-border-warning',
       evidenceBg: 'bg-warning/5 border border-warning/10',
     },
-    Reject: {
+    'Hold Before Approval': {
       border: 'border-danger/30',
       bg: 'bg-danger/[0.06]',
       text: 'text-danger',
@@ -450,21 +450,42 @@ function DecisionBrief({ brief }) {
       evidenceBg: 'bg-danger/5 border border-danger/10',
     },
   }
-  const tone = toneMap[brief.recommendation] || toneMap.Reject
+  const tone = toneMap[brief.recommendation] || toneMap['Hold Before Approval']
 
   return (
     <section className={`animate-rise rounded-xl border p-5 ${tone.border} ${tone.bg}`}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">Decision Basis</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-faint">Checker Note</p>
           <h2 className={`mt-2 text-xl font-extrabold ${tone.text}`}>{brief.primarySignal}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{brief.checkerNote}</p>
         </div>
         <span className={`w-fit rounded-full border px-3 py-1 text-xs font-extrabold uppercase ${tone.border} ${tone.text}`}>
           {brief.recommendation}
         </span>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        {brief.evidence.map((item) => (
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.2fr]">
+        <div className={`rounded-lg px-4 py-3 ${tone.evidenceBg}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-faint">Reason</p>
+          <div className="mt-3 space-y-2">
+            {brief.evidence.map((item) => (
+              <p key={item} className="text-sm font-medium text-ink-muted">
+                {item}
+              </p>
+            ))}
+          </div>
+        </div>
+        <div className={`rounded-lg px-4 py-3 ${tone.evidenceBg}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-faint">What the checker should do</p>
+          <ul className="mt-3 space-y-2 text-sm font-medium text-ink-muted">
+            {brief.checkerActions.map((action) => (
+              <li key={action}>{action}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        {brief.documentHints.map((item) => (
           <div key={item} className={`rounded-lg px-3 py-3 text-sm font-medium text-ink-muted ${tone.evidenceBg}`}>
             {item}
           </div>
@@ -652,26 +673,54 @@ function buildDecisionBrief(result) {
   const cards = result?.insight_cards || []
   if (cards.length === 0) {
     return {
-      recommendation: 'Approve',
-      primarySignal: 'No fraud pattern detected',
-      summary: 'No fraud signals found. Case may proceed to underwriting.',
-      evidence: ['Hash integrity confirmed', 'Bundle seal intact', 'Temporal rules passed'],
+      recommendation: 'Proceed with Standard Checks',
+      primarySignal: 'No document fraud pattern detected',
+      summary: 'The uploaded documents are clear from integrity and timeline checks.',
+      checkerNote:
+        'The checker may accept this file for the normal loan workflow, subject to regular credit, KYC, and policy checks.',
+      evidence: ['No hash mismatch found'],
+      checkerActions: [
+        'Mark document verification as clear.',
+        'Continue with standard underwriting checks.',
+        'Keep the audit log with the loan file.',
+      ],
+      documentHints: ['Hash integrity confirmed', 'Bundle seal intact', 'Temporal rules passed'],
     }
   }
 
   const highSeverityCount = cards.filter((card) => card.fraud_pattern.severity === 'HIGH').length
-  const recommendation = highSeverityCount > 0 ? 'Reject' : 'Manual Review'
+  const recommendation = highSeverityCount > 0 ? 'Hold Before Approval' : 'Manual Review'
   const primarySignal = cards[0]?.fraud_pattern.pattern_name || 'Fraud pattern detected'
-  const evidence = cards.slice(0, 3).map((card) => card.fraud_pattern.failed_check)
+  const evidence = cards.slice(0, 2).map((card) => card.fraud_pattern.failed_check)
+  const documentHints = cards
+    .slice(0, 3)
+    .map((card) => `${card.fraud_pattern.affected_document}: ${card.fraud_pattern.severity}`)
 
   return {
     recommendation,
     primarySignal,
     summary:
-      recommendation === 'Reject'
-        ? 'High-severity fraud signal found. Escalate before proceeding.'
-        : 'Inconsistency found. Manual review required before decision.',
+      recommendation === 'Hold Before Approval'
+        ? 'Document risk found. The loan file should not be cleared yet.'
+        : 'Document inconsistency found. Checker review is needed before clearance.',
+    checkerNote:
+      recommendation === 'Hold Before Approval'
+        ? 'Keep the application on hold and verify the flagged documents before any approval step.'
+        : 'Do not mark the file as clear until the flagged document issue is resolved or explained.',
     evidence,
+    checkerActions:
+      recommendation === 'Hold Before Approval'
+        ? [
+            'Hold the loan file at checker stage.',
+            'Ask for original or re-issued documents.',
+            'Escalate with the audit log if the mismatch remains.',
+          ]
+        : [
+            'Review the flagged document manually.',
+            'Request supporting proof or updated documents.',
+            'Clear the file only after the mismatch is resolved.',
+          ],
+    documentHints,
   }
 }
 
