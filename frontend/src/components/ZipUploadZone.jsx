@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2, FileArchive, Loader2, Files } from 'lucide-re
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-import { registerBundleZip, verifyBundle, verifyBundleZip } from '../api/client.js'
+import { registerBundle, registerBundleZip, verifyBundle, verifyBundleZip } from '../api/client.js'
 import DocumentUploadGrid from './DocumentUploadGrid.jsx'
 
 const progressMessages = [
@@ -103,7 +103,7 @@ function ZipUploadZone({
   const canSubmitIndividual = Boolean(
     requiredDocuments.every((doc) => files[doc.id]) && 
     applicantIdValue.trim() && 
-    bundleIdValue.trim() && 
+    (autoRegister || bundleIdValue.trim()) && 
     !isLoading
   )
 
@@ -143,12 +143,27 @@ function ZipUploadZone({
       } else {
         const formData = new FormData()
         formData.append('applicant_id', applicantIdValue.trim())
-        formData.append('bundle_id', bundleIdValue.trim())
         
         requiredDocuments.forEach((doc) => {
           formData.append(doc.id, files[doc.id])
         })
 
+        if (autoRegister) {
+          const registrationResponse = await registerBundle(formData)
+          const verificationFormData = new FormData()
+          verificationFormData.append('applicant_id', registrationResponse.data.applicant_id)
+          verificationFormData.append('bundle_id', registrationResponse.data.bundle_id)
+
+          requiredDocuments.forEach((doc) => {
+            verificationFormData.append(doc.id, files[doc.id])
+          })
+
+          const response = await verifyBundle(verificationFormData)
+          onUploadComplete(response.data)
+          return
+        }
+
+        formData.append('bundle_id', bundleIdValue.trim())
         const response = await verifyBundle(formData)
         onUploadComplete(response.data)
       }
@@ -169,9 +184,10 @@ function ZipUploadZone({
 
       {autoRegister ? (
         <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-4 py-3 text-sm font-bold text-primary-light">
-          New detection mode: upload one ZIP. A baseline seal will be created automatically before checks run.
+          New detection mode: upload once. A baseline seal will be created automatically before checks run.
         </div>
-      ) : (
+      ) : null}
+
       <div className="flex rounded-lg border border-white/[0.08] bg-surface-100 p-1">
         <button
           className={`flex-1 rounded-md py-2.5 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
@@ -196,9 +212,8 @@ function ZipUploadZone({
           <Files size={16} /> Individual Files
         </button>
       </div>
-      )}
 
-      {autoRegister || uploadMode === 'zip' ? (
+      {uploadMode === 'zip' ? (
         <div
           {...getRootProps()}
           className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${
