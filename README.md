@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🛡️ PRAMANIK-DRISHTI
 
@@ -342,4 +342,3 @@ This project was built for the **Canara Bank SuRaksha Hackathon**.
 _Built with ❤️ by the Pramanik-Drishti team_
 
 </div>
-]]>
